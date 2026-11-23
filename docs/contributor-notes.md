@@ -20,7 +20,7 @@ versions may differ. Addresses are placeholders: `192.168.1.50` stands for the p
 | `tools/probe.py` | Read-only probe, dependency-free Python. Contains reusable `WS` and `Sdcp` classes. |
 | `tools/capture.py` | Captures real replies as fixtures. Has a fixed WebSocket reader (`WS2`). |
 | `tools/rsh.py` | Runs a shell command on the printer as root through the OpenCentauri shell on port 4567. |
-| `tools/deploy.py` | Copies the build onto the printer. **Not working yet**, see section 4. |
+| `tools/printer_install.py` | Installs the build on the printer at `/cc/` (shipped in releases as `install_on_printer.py`). See section 4. |
 | `docs/protocol-commands.md` | SDCP command table taken from the printer's own stock web UI and binary. |
 | `docs/printer-internals.md` | Findings from read-only exploration over the root shell. |
 
@@ -81,25 +81,19 @@ it does not, because port 80 sends no CORS headers). When the page is served ove
 Checked in a real browser: the page loads from the printer, connects with no setup, shows status, temperatures and
 the 640x360 camera picture, and the light commands are accepted.
 
-The method that works, with the preview server (`npx vite preview --host`) running on your computer:
+Install or update with `npm run build`, then `python tools/printer_install.py <printer-ip>` (`--remove` to undo).
+Releases ship the same script with the built files as `CentauriControl-<version>-printer.zip`.
 
-    B=http://192.168.1.10:4173; T=/app/resources/www/cc
-    CMD="mkdir -p $T/assets && cd $T && rm -f assets/*"
-    for f in $(cd dist && find . -type f | sed 's|^\./||'); do
-      CMD="$CMD; /usr/bin/curl -s -f -m 60 -o $f $B/$f; echo \$? $f"; done
-    python -I tools/rsh.py --host 192.168.1.50 --timeout 300 "$CMD; ls -la $T $T/assets; pidof app"
-    # then fetch each file back from http://192.168.1.50/cc/<f> and compare with dist/<f>
-
-- Use `curl -m 60`, one file at a time. With `-m 15` the 103 KB bundle was cut short.
-- Old hashed asset files must be removed, and every file compared afterwards.
-- Undo: `python -I tools/rsh.py "rm -rf /app/resources/www/cc"`.
+How it works, and why:
+- Files are **pushed** through the root shell on 4567 as `printf` lines with 3-digit octal escapes (POSIX, so
+  BusyBox handles it; the printer has no `base64` applet). 6000 bytes per line, one connection per line.
+  Lines of 32 KB were also tested fine.
+- They go into `/app/resources/www/cc.new`, every file's MD5 is compared, and only then is `cc` swapped
+  for `cc.new`. A failed or interrupted install leaves the old copy working.
+- This replaces the old `tools/deploy.py`, which made the printer pull files from a temporary web server on the
+  computer. Its first run hung (probably a Windows firewall) after it had already deleted the old asset files.
 - `/app` is on the root overlay. Expect `/cc/` to survive a reboot but to disappear after a firmware or
-  OpenCentauri update (neither confirmed).
-- **`tools/deploy.py` failed on its first run.** It printed nothing in 100 s and had already deleted the old asset
-  files, leaving `/cc/` broken until restored by hand. Likely cause (not confirmed): a firewall on the computer
-  blocked the script's own temporary web server, so the printer's curl calls hung. Fix before reuse: fetch into a
-  temporary folder on the printer and swap only after every file arrives, and either reuse the vite preview server
-  or push files instead of pulling. `scp` over port 22 would remove the need for a server; untried.
+  OpenCentauri update (neither confirmed). Running the installer again puts it back.
 
 ## 5. Known facts worth keeping
 
@@ -163,8 +157,8 @@ The method that works, with the preview server (`npx vite preview --host`) runni
 
 ## 7. Suggested direction
 
-a. **Make the printer-hosted `/cc/` build the main way to use the app at home**, with a deploy script that works
-   (section 4). Then find a home that survives firmware updates: for example keep the files under `/user-resource/`
+a. **Make the printer-hosted `/cc/` build the main way to use the app at home**, now that the installer works
+   (section 4). Next, find a home that survives firmware updates: for example keep the files under `/user-resource/`
    and re-link them into the web root from a `/kip/etc/init.d/` boot script, or serve them straight from `/local/...`
    if the stock server returns `.html` from there with a usable content type (untested).
 b. **Add the dead-link check** (section 6).

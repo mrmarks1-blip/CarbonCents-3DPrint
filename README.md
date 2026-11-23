@@ -97,11 +97,22 @@ Detailed findings, safety rules and open questions for anyone continuing the wor
 [docs/protocol-commands.md](docs/protocol-commands.md) and the firmware exploration in
 [docs/printer-internals.md](docs/printer-internals.md).
 
-## Install on Android
+## Download
 
-Each push builds an APK in GitHub Actions (workflow "Centauri Control"). Open the latest run, download
-the `centauri-control-apk` artifact, unzip it and open `app-debug.apk` on the phone (allow installing
-from that source when asked). Then Settings > enter the printer's IP address > Save and connect.
+Get the latest from the [Releases page](https://github.com/mrmarks1-blip/CarbonCents-3DPrint/releases/latest):
+
+- **Android:** `CentauriControl-<version>.apk`. Open it on the phone and allow installing from that source
+  when asked. Then Settings > enter the printer's IP address > Save and connect.
+- **On the printer itself** (OpenCentauri Patched firmware): `CentauriControl-<version>-printer.zip`. Unzip it
+  and run `python install_on_printer.py <printer-ip>`; then open `http://<printer-ip>/cc/` from any device on
+  your network, with no setup. Details in `README.txt` inside the zip.
+- **From your own computer:** `CentauriControl-<version>-web.zip`, served by any static web server
+  (see below).
+
+Every push also builds an APK in GitHub Actions (workflow "Centauri Control", artifact `centauri-control-apk`).
+To publish a release, push a tag: `git tag v0.2.0 && git push origin v0.2.0`.
+
+## Install on Android (signing)
 
 To let future builds install over the old one without losing settings, add a fixed signing key once
 in your own fork:
@@ -111,6 +122,9 @@ in your own fork:
     base64 -w0 debug.keystore   # save the output as the repository secret ANDROID_DEBUG_KEYSTORE_B64
 
 ## Use in a desktop browser
+
+From a release: unzip `CentauriControl-<version>-web.zip`, run `python -m http.server 4173` inside it, and open
+`http://<this-computer's-LAN-IP>:4173`. From source:
 
     npm install
     npm run build
@@ -138,7 +152,7 @@ headers and whether Z offset writes work, and saves it all to `centauri-probe-re
 - `src/features/` — stuck-state assistant, maintenance logbook, notifications
 - `src/views/` — the screens
 - `android/` — the Capacitor Android project
-- `tools/probe.py` — the printer probe
+- `tools/probe.py` — the printer probe; `tools/printer_install.py` — installs the app on the printer
 - `test/` — unit tests, the simulated printer and the browser test
 
 ## Credits
