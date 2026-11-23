@@ -1,0 +1,35 @@
+{
+  "cmd": 386,
+  "request_data": {
+    "Enable": 1
+  },
+  "request_envelope": {
+    "Id": "",
+    "Data": {
+      "Cmd": 386,
+      "Data": {
+        "Enable": 1
+      },
+      "RequestID": "dbd83af4b9224d5b85df328587c68b9a",
+      "MainboardID": "0123456789abcdef0000000000000000",
+      "TimeStamp": 1795427708570,
+      "From": 1
+    }
+  },
+  "reply_ms": 64,
+  "reply": {
+    "Id": "00000000000000000000000000000000",
+    "Data": {
+      "Cmd": 386,
+      "Data": {
+        "Ack": 0,
+        "VideoUrl": "192.168.1.50:3031/video"
+      },
+      "RequestID": "dbd83af4b9224d5b85df328587c68b9a",
+      "MainboardID": "0123456789abcdef0000000000000000",
+      "TimeStamp": 1795427708
+    },
+    "Topic": "sdcp/response/0123456789abcdef0000000000000000"
+  },
+  "pushed_meanwhile": []
+}

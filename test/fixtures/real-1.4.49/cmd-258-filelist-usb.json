@@ -1,0 +1,34 @@
+{
+  "cmd": 258,
+  "request_data": {
+    "Url": "/usb"
+  },
+  "request_envelope": {
+    "Id": "",
+    "Data": {
+      "Cmd": 258,
+      "Data": {
+        "Url": "/usb"
+      },
+      "RequestID": "405770b36c0f496c9d3ae8c9c282f7b8",
+      "MainboardID": "0123456789abcdef0000000000000000",
+      "TimeStamp": 1795427667065,
+      "From": 1
+    }
+  },
+  "reply_ms": 83,
+  "reply": {
+    "Id": "00000000000000000000000000000000",
+    "Data": {
+      "Cmd": 258,
+      "Data": {
+        "Ack": -1
+      },
+      "RequestID": "405770b36c0f496c9d3ae8c9c282f7b8",
+      "MainboardID": "0123456789abcdef0000000000000000",
+      "TimeStamp": 1795427667
+    },
+    "Topic": "sdcp/response/0123456789abcdef0000000000000000"
+  },
+  "pushed_meanwhile": []
+}

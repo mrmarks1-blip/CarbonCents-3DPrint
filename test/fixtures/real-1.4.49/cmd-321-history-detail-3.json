@@ -1,0 +1,268 @@
+{
+  "cmd": 321,
+  "request_data": {
+    "Id": [
+      "2a4194d9-da42-4bd4-b14d-48ca429184ac",
+      "8b1a7f43-757a-469e-85bd-b41b056a92bb",
+      "b2deecb8-62c5-4919-b32a-ee66a7a94209",
+      "98cba431-f1f0-4608-8168-3f11034f380f",
+      "e51db756-48ae-4690-9a0d-ba3edf09177b",
+      "be932942-ab96-4d56-b52f-f31fd27448ca",
+      "befd051c-74cc-4a90-a45c-5310908ec064",
+      "7c0cb8f1-38fe-400b-b5c1-2cd40f7f264c",
+      "6937bc9b-abe1-415f-8562-9e378a9d8fcb",
+      "1c515e92-fc70-4730-a80a-10821623152d"
+    ]
+  },
+  "request_envelope": {
+    "Id": "",
+    "Data": {
+      "Cmd": 321,
+      "Data": {
+        "Id": [
+          "2a4194d9-da42-4bd4-b14d-48ca429184ac",
+          "8b1a7f43-757a-469e-85bd-b41b056a92bb",
+          "b2deecb8-62c5-4919-b32a-ee66a7a94209",
+          "98cba431-f1f0-4608-8168-3f11034f380f",
+          "e51db756-48ae-4690-9a0d-ba3edf09177b",
+          "be932942-ab96-4d56-b52f-f31fd27448ca",
+          "befd051c-74cc-4a90-a45c-5310908ec064",
+          "7c0cb8f1-38fe-400b-b5c1-2cd40f7f264c",
+          "6937bc9b-abe1-415f-8562-9e378a9d8fcb",
+          "1c515e92-fc70-4730-a80a-10821623152d"
+        ]
+      },
+      "RequestID": "1e3fbac8833b4a8ca36c7d2224a8588a",
+      "MainboardID": "0123456789abcdef0000000000000000",
+      "TimeStamp": 1795427750938,
+      "From": 1
+    }
+  },
+  "reply_ms": 122,
+  "reply": {
+    "Id": "00000000000000000000000000000000",
+    "Data": {
+      "Cmd": 321,
+      "Data": {
+        "Ack": 0,
+        "HistoryDetailList": [
+          {
+            "Thumbnail": "http://192.168.1.50/board-resource/history_image/2a4194d9-da42-4bd4-b14d-48ca429184ac.png",
+            "TaskName": "/local/ECC_0.4_Model Name 038_PLA _0.2_1h2m.gcode",
+            "BeginTime": 1790801029,
+            "EndTime": 1790820727,
+            "TaskStatus": 1,
+            "SliceInformation": {
+              "layer_height": 0,
+              "total_layer_numbers": 199,
+              "model_size_x": 0,
+              "model_size_y": 0,
+              "model_size_z": 0,
+              "print_time": 19317.202198461047
+            },
+            "AlreadyPrintLayer": 199,
+            "TaskId": "2a4194d9-da42-4bd4-b14d-48ca429184ac",
+            "MD5": "c6c09c6ea558d9424642b2db4fcae93f",
+            "TimeLapseVideoStatus": 4,
+            "TimeLapseVideoUrl": "/local/ECC_0.4_Model Name 038_PLA _0.2_1h2m.gcode",
+            "ErrorStatusReason": 0
+          },
+          {
+            "Thumbnail": "http://192.168.1.50/board-resource/history_image/8b1a7f43-757a-469e-85bd-b41b056a92bb.png",
+            "TaskName": "/local/ECC_0.4_Model Name 039_PLA _0.2_1h2m.gcode",
+            "BeginTime": 1790712723,
+            "EndTime": 1790715629,
+            "TaskStatus": 3,
+            "SliceInformation": {
+              "layer_height": 0,
+              "total_layer_numbers": 265,
+              "model_size_x": 0,
+              "model_size_y": 0,
+              "model_size_z": 0,
+              "print_time": 10.73274925502482
+            },
+            "AlreadyPrintLayer": 3,
+            "TaskId": "8b1a7f43-757a-469e-85bd-b41b056a92bb",
+            "MD5": "c6a7d057bf91e7a36448fb0f3475dc7c",
+            "TimeLapseVideoStatus": 4,
+            "TimeLapseVideoUrl": "/local/ECC_0.4_Model Name 039_PLA _0.2_1h2m.gcode",
+            "ErrorStatusReason": 0
+          },
+          {
+            "Thumbnail": "http://192.168.1.50/board-resource/history_image/b2deecb8-62c5-4919-b32a-ee66a7a94209.png",
+            "TaskName": "/local/ECC_0.4_Model Name 039_PLA _0.2_1h2m.gcode",
+            "BeginTime": 1790709482,
+            "EndTime": 1790712071,
+            "TaskStatus": 3,
+            "SliceInformation": {
+              "layer_height": 0,
+              "total_layer_numbers": 265,
+              "model_size_x": 0,
+              "model_size_y": 0,
+              "model_size_z": 0,
+              "print_time": 11.33628967206459
+            },
+            "AlreadyPrintLayer": 2,
+            "TaskId": "b2deecb8-62c5-4919-b32a-ee66a7a94209",
+            "MD5": "c6a7d057bf91e7a36448fb0f3475dc7c",
+            "TimeLapseVideoStatus": 4,
+            "TimeLapseVideoUrl": "/local/ECC_0.4_Model Name 039_PLA _0.2_1h2m.gcode",
+            "ErrorStatusReason": 0
+          },
+          {
+            "Thumbnail": "http://192.168.1.50/board-resource/history_image/98cba431-f1f0-4608-8168-3f11034f380f.png",
+            "TaskName": "/local/ECC_0.4_Model Name 040_PLA _0.2_1h2m.gcode",
+            "BeginTime": 1790429948,
+            "EndTime": 1790476160,
+            "TaskStatus": 1,
+            "SliceInformation": {
+              "layer_height": 0,
+              "total_layer_numbers": 791,
+              "model_size_x": 0,
+              "model_size_y": 0,
+              "model_size_z": 0,
+              "print_time": 46085.927252892
+            },
+            "AlreadyPrintLayer": 791,
+            "TaskId": "98cba431-f1f0-4608-8168-3f11034f380f",
+            "MD5": "ef2536f647a3930742a02c17cf1203a1",
+            "TimeLapseVideoStatus": 4,
+            "TimeLapseVideoUrl": "/local/ECC_0.4_Model Name 040_PLA _0.2_1h2m.gcode",
+            "ErrorStatusReason": 0
+          },
+          {
+            "Thumbnail": "http://192.168.1.50/board-resource/history_image/e51db756-48ae-4690-9a0d-ba3edf09177b.png",
+            "TaskName": "/local/ECC_0.4_Model Name 040_PLA _0.2_1h2m.gcode",
+            "BeginTime": 1790373553,
+            "EndTime": 1790419768,
+            "TaskStatus": 1,
+            "SliceInformation": {
+              "layer_height": 0,
+              "total_layer_numbers": 791,
+              "model_size_x": 0,
+              "model_size_y": 0,
+              "model_size_z": 0,
+              "print_time": 46084.76687859997
+            },
+            "AlreadyPrintLayer": 791,
+            "TaskId": "e51db756-48ae-4690-9a0d-ba3edf09177b",
+            "MD5": "ef2536f647a3930742a02c17cf1203a1",
+            "TimeLapseVideoStatus": 4,
+            "TimeLapseVideoUrl": "/local/ECC_0.4_Model Name 040_PLA _0.2_1h2m.gcode",
+            "ErrorStatusReason": 0
+          },
+          {
+            "Thumbnail": "http://192.168.1.50/board-resource/history_image/be932942-ab96-4d56-b52f-f31fd27448ca.png",
+            "TaskName": "/local/ECC_0.4_Model Name 040_PLA _0.2_1h2m.gcode",
+            "BeginTime": 1790325615,
+            "EndTime": 1790371827,
+            "TaskStatus": 1,
+            "SliceInformation": {
+              "layer_height": 0,
+              "total_layer_numbers": 791,
+              "model_size_x": 0,
+              "model_size_y": 0,
+              "model_size_z": 0,
+              "print_time": 46087.305671268
+            },
+            "AlreadyPrintLayer": 791,
+            "TaskId": "be932942-ab96-4d56-b52f-f31fd27448ca",
+            "MD5": "ef2536f647a3930742a02c17cf1203a1",
+            "TimeLapseVideoStatus": 4,
+            "TimeLapseVideoUrl": "/local/ECC_0.4_Model Name 040_PLA _0.2_1h2m.gcode",
+            "ErrorStatusReason": 0
+          },
+          {
+            "Thumbnail": "http://192.168.1.50/board-resource/history_image/befd051c-74cc-4a90-a45c-5310908ec064.png",
+            "TaskName": "/local/ECC_0.4_Model Name 040_PLA _0.2_1h2m.gcode",
+            "BeginTime": 1790275456,
+            "EndTime": 1790321665,
+            "TaskStatus": 1,
+            "SliceInformation": {
+              "layer_height": 0,
+              "total_layer_numbers": 791,
+              "model_size_x": 0,
+              "model_size_y": 0,
+              "model_size_z": 0,
+              "print_time": 46083.279524182
+            },
+            "AlreadyPrintLayer": 791,
+            "TaskId": "befd051c-74cc-4a90-a45c-5310908ec064",
+            "MD5": "ef2536f647a3930742a02c17cf1203a1",
+            "TimeLapseVideoStatus": 4,
+            "TimeLapseVideoUrl": "/local/ECC_0.4_Model Name 040_PLA _0.2_1h2m.gcode",
+            "ErrorStatusReason": 0
+          },
+          {
+            "Thumbnail": "http://192.168.1.50/board-resource/history_image/7c0cb8f1-38fe-400b-b5c1-2cd40f7f264c.png",
+            "TaskName": "/local/ECC_0.4_Model Name 041_PLA _0.2_1h2m.gcode",
+            "BeginTime": 1790261156,
+            "EndTime": 1790273219,
+            "TaskStatus": 1,
+            "SliceInformation": {
+              "layer_height": 0,
+              "total_layer_numbers": 791,
+              "model_size_x": 0,
+              "model_size_y": 0,
+              "model_size_z": 0,
+              "print_time": 11932.787212690004
+            },
+            "AlreadyPrintLayer": 791,
+            "TaskId": "7c0cb8f1-38fe-400b-b5c1-2cd40f7f264c",
+            "MD5": "3c3fecd7a1b1e8012958ecc4ca22fa40",
+            "TimeLapseVideoStatus": 4,
+            "TimeLapseVideoUrl": "/local/ECC_0.4_Model Name 041_PLA _0.2_1h2m.gcode",
+            "ErrorStatusReason": 0
+          },
+          {
+            "Thumbnail": "http://192.168.1.50/board-resource/history_image/6937bc9b-abe1-415f-8562-9e378a9d8fcb.png",
+            "TaskName": "/local/ECC_0.4_Model Name 042_PLA _0.2_1h2m.gcode",
+            "BeginTime": 1790257020,
+            "EndTime": 1790258937,
+            "TaskStatus": 1,
+            "SliceInformation": {
+              "layer_height": 0,
+              "total_layer_numbers": 10,
+              "model_size_x": 0,
+              "model_size_y": 0,
+              "model_size_z": 0,
+              "print_time": 1794.9871260219952
+            },
+            "AlreadyPrintLayer": 10,
+            "TaskId": "6937bc9b-abe1-415f-8562-9e378a9d8fcb",
+            "MD5": "d804153e376042d06766a1d292dbd4c1",
+            "TimeLapseVideoStatus": 4,
+            "TimeLapseVideoUrl": "/local/ECC_0.4_Model Name 042_PLA _0.2_1h2m.gcode",
+            "ErrorStatusReason": 0
+          },
+          {
+            "Thumbnail": "http://192.168.1.50/board-resource/history_image/1c515e92-fc70-4730-a80a-10821623152d.png",
+            "TaskName": "/local/ECC_0.4_Model Name 043_PLA _0.2_1h2m.gcode",
+            "BeginTime": 1790254487,
+            "EndTime": 1790255145,
+            "TaskStatus": 1,
+            "SliceInformation": {
+              "layer_height": 0,
+              "total_layer_numbers": 4,
+              "model_size_x": 0,
+              "model_size_y": 0,
+              "model_size_z": 0,
+              "print_time": 530.3374148360017
+            },
+            "AlreadyPrintLayer": 4,
+            "TaskId": "1c515e92-fc70-4730-a80a-10821623152d",
+            "MD5": "fe714ceb7b78720d5c6ddd1f19800f7d",
+            "TimeLapseVideoStatus": 4,
+            "TimeLapseVideoUrl": "/local/ECC_0.4_Model Name 043_PLA _0.2_1h2m.gcode",
+            "ErrorStatusReason": 0
+          }
+        ]
+      },
+      "RequestID": "1e3fbac8833b4a8ca36c7d2224a8588a",
+      "MainboardID": "0123456789abcdef0000000000000000",
+      "TimeStamp": 1795427751
+    },
+    "Topic": "sdcp/response/0123456789abcdef0000000000000000"
+  },
+  "pushed_meanwhile": []
+}

@@ -1,0 +1,35 @@
+{
+  "name": "centauri-control",
+  "private": true,
+  "license": "MIT",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "e2e": "vite build && node test/e2e.mjs",
+    "fake-printer": "node test/fake-printer.mjs",
+    "real-smoke": "node test/real-smoke.mjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/local-notifications": "^8.3.1",
+    "@preact/signals": "^2.11.4",
+    "preact": "^11.1.1",
+    "spark-md5": "^3.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.2",
+    "@preact/preset-vite": "^2.10.6",
+    "@types/node": "^24.19.2",
+    "@types/spark-md5": "^3.0.5",
+    "playwright-core": "^1.65.1",
+    "typescript": "~7.0.2",
+    "vite": "^8.3.6",
+    "vitest": "^5.1.1",
+    "ws": "^8.23.0"
+  }
+}

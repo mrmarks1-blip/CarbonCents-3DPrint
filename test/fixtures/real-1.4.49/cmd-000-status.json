@@ -1,0 +1,79 @@
+{
+  "cmd": 0,
+  "request_data": {},
+  "request_envelope": {
+    "Id": "",
+    "Data": {
+      "Cmd": 0,
+      "Data": {},
+      "RequestID": "7861296624d14912aaa28f02a34336ee",
+      "MainboardID": "",
+      "TimeStamp": 1795427746221,
+      "From": 1
+    }
+  },
+  "reply_ms": 68,
+  "reply": {
+    "Id": "00000000000000000000000000000000",
+    "Data": {
+      "Cmd": 0,
+      "Data": {
+        "Ack": 0
+      },
+      "RequestID": "7861296624d14912aaa28f02a34336ee",
+      "MainboardID": "0123456789abcdef0000000000000000",
+      "TimeStamp": 1795427746
+    },
+    "Topic": "sdcp/response/0123456789abcdef0000000000000000"
+  },
+  "pushed_meanwhile": [
+    {
+      "at_ms": 142,
+      "message": {
+        "Status": {
+          "CurrentStatus": [
+            0
+          ],
+          "TimeLapseStatus": 0,
+          "PlatFormType": 0,
+          "AmsConnectStatus": 0,
+          "TempOfHotbed": 18.26873813982189,
+          "TempOfNozzle": 21.57906355825499,
+          "TempOfBox": 17.53045323880076,
+          "TempTargetHotbed": 0,
+          "TempTargetNozzle": 0,
+          "TempTargetBox": 0,
+          "CurrenCoord": "202.00,264.50,98.43",
+          "CurrentFanSpeed": {
+            "ModelFan": 0,
+            "AuxiliaryFan": 0,
+            "BoxFan": 0
+          },
+          "ZOffset": 1e-14,
+          "LightStatus": {
+            "SecondLight": 1,
+            "RgbLight": [
+              0,
+              0,
+              0
+            ]
+          },
+          "PrintInfo": {
+            "Status": 0,
+            "CurrentLayer": 129,
+            "TotalLayer": 129,
+            "CurrentTicks": 2509.7133530300002,
+            "TotalTicks": 2531,
+            "Filename": "",
+            "TaskId": "",
+            "PrintSpeedPct": 100,
+            "Progress": 0
+          }
+        },
+        "MainboardID": "0123456789abcdef0000000000000000",
+        "TimeStamp": 1795427746,
+        "Topic": "sdcp/status/0123456789abcdef0000000000000000"
+      }
+    }
+  ]
+}

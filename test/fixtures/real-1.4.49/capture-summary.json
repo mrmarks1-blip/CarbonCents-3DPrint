@@ -1,0 +1,98 @@
+{
+  "host": "192.168.1.50",
+  "started": "2026-11-23 09:53:54",
+  "timings_ms": {
+    "ws_connect": 7880,
+    "cmd-000-status.json": 303,
+    "cmd-001-attributes.json": 126,
+    "cmd-258-filelist-local.json": 1660,
+    "cmd-258-filelist-usb.json": 83,
+    "cmd-260-filedetail-1.json": 8969,
+    "cmd-260-filedetail-2.json": 8826,
+    "cmd-320-history-ids.json": null,
+    "cmd-324-material.json": null,
+    "cmd-134-powerloss.json": 376,
+    "cmd-386-camera-enable.json": 64,
+    "cmd-386-camera-disable.json": 154
+  },
+  "errors": [],
+  "CurrentStatus": [
+    0
+  ],
+  "unprompted_messages_in_20s": 0,
+  "unprompted_at_s": [],
+  "unprompted_topics": [],
+  "history_ids": 0,
+  "camera": {
+    "response_head": [
+      "HTTP/1.0 200 OK",
+      "Cache-Control: no-cache",
+      "Pragma: no-cache",
+      "Expires: Thu, %d %d %d %d:%d:%d GMT",
+      "Content-Type: multipart/x-mixed-replace; boundary=--foo"
+    ],
+    "bytes_received": 449793,
+    "first_part_head": "--foo\r\nContent-Type: image/jpeg\r\nContent-Length: 32848\r\n\r\n",
+    "frames": 13,
+    "avg_frame_bytes": 32955,
+    "min_frame_bytes": 32838,
+    "max_frame_bytes": 33081,
+    "fps": 10.18,
+    "sof_marker": "0xc0",
+    "height": 360,
+    "width": 640
+  },
+  "http": {
+    "file_detail_thumbnail": {
+      "url": "http://192.168.1.50/thumbnail/ECC_0.4_Model Name 002_PLA _0.2_1h2m.gcode.png",
+      "status": 200,
+      "headers": [
+        [
+          "Content-Type",
+          "image/png"
+        ],
+        [
+          "Etag",
+          "\"1795427668.2647\""
+        ],
+        [
+          "Content-Length",
+          "2647"
+        ]
+      ],
+      "bytes_read": 2647,
+      "headers_ms": 33,
+      "total_ms": 34,
+      "magic_hex": "89504e470d0a1a0a0000000d49484452",
+      "error": null
+    },
+    "gcode_ranged_get": {
+      "url": "http://192.168.1.50/local/ECC_0.4_Model Name 002_PLA _0.2_1h2m.gcode",
+      "status": 206,
+      "headers": [
+        [
+          "Content-Type",
+          "text/plain; charset=utf-8"
+        ],
+        [
+          "Etag",
+          "\"1795390550.1085790\""
+        ],
+        [
+          "Content-Length",
+          "2048"
+        ],
+        [
+          "Content-Range",
+          "bytes 0-2047/1085790"
+        ]
+      ],
+      "bytes_read": 2048,
+      "headers_ms": 13,
+      "total_ms": 20,
+      "magic_hex": "3b204845414445525f424c4f434b5f53",
+      "error": null
+    }
+  },
+  "total_seconds": 83.4
+}

@@ -1,0 +1,34 @@
+{
+  "response_head": [
+    "HTTP/1.0 200 OK",
+    "Cache-Control: no-cache",
+    "Pragma: no-cache",
+    "Expires: Thu, %d %d %d %d:%d:%d GMT",
+    "Content-Type: multipart/x-mixed-replace; boundary=--foo"
+  ],
+  "bytes_received": 449793,
+  "first_part_head": "--foo\r\nContent-Type: image/jpeg\r\nContent-Length: 32848\r\n\r\n",
+  "frames": 13,
+  "frame_arrival_s": [
+    0.367,
+    0.668,
+    0.81,
+    0.996,
+    1.277,
+    1.285,
+    1.295,
+    1.31,
+    1.337,
+    1.362,
+    1.37,
+    1.379,
+    1.546
+  ],
+  "avg_frame_bytes": 32955,
+  "min_frame_bytes": 32838,
+  "max_frame_bytes": 33081,
+  "fps": 10.18,
+  "sof_marker": "0xc0",
+  "height": 360,
+  "width": 640
+}

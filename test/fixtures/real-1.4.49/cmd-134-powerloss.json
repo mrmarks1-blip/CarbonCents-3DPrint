@@ -1,0 +1,119 @@
+{
+  "cmd": 134,
+  "request_data": {},
+  "request_envelope": {
+    "Id": "",
+    "Data": {
+      "Cmd": 134,
+      "Data": {},
+      "RequestID": "4476976a02834251a21254c2798c5fa1",
+      "MainboardID": "0123456789abcdef0000000000000000",
+      "TimeStamp": 1795427707382,
+      "From": 1
+    }
+  },
+  "reply_ms": 376,
+  "reply": {
+    "Id": "00000000000000000000000000000000",
+    "Data": {
+      "Cmd": 134,
+      "Data": {
+        "Ack": 0
+      },
+      "RequestID": "4476976a02834251a21254c2798c5fa1",
+      "MainboardID": "0123456789abcdef0000000000000000",
+      "TimeStamp": 1795427707
+    },
+    "Topic": "sdcp/response/0123456789abcdef0000000000000000"
+  },
+  "pushed_meanwhile": [
+    {
+      "at_ms": 376,
+      "message": {
+        "Id": "00000000000000000000000000000000",
+        "Data": {
+          "Cmd": 320,
+          "Data": {
+            "Ack": 0,
+            "HistoryData": [
+              "26d7a067-2a50-437c-925b-91a360b49138",
+              "798f46c4-b965-4575-b9f6-2dec0c033eef",
+              "3881a4ef-1da4-45f7-9c57-8ffed8401ee9",
+              "10790d56-aaad-4d02-819e-b545b698db29",
+              "161d6b5f-4e68-4d80-a4ff-1ab4d4e3f594",
+              "438b3000-6224-48bb-b71b-69ab9513eadc",
+              "14dafb35-6ec6-4a4d-9354-9e7bc0c25617",
+              "1ca6f1c6-4849-46d2-8f32-be57d686af50",
+              "699cda60-25b1-4477-996f-ae2c5266faff",
+              "fa17c5a1-3fca-419a-91b6-b03f7041ed09",
+              "2c7fc361-9aa2-44e7-b455-78300164f8b3",
+              "11d81f46-8e55-489f-bdd7-898062c2b481",
+              "b09ccd0d-670a-434f-b905-9f4d38e375f1",
+              "fd7d9de3-7cf3-4062-88d9-c14805978847",
+              "30dad335-5190-4329-bdda-43cd7f509e50",
+              "e2884753-dc33-437b-bf4f-f510cecd6f23",
+              "00301f33-7e0e-456e-9d53-efabf9871d37",
+              "cea36808-f427-4435-92a6-92db6b98a068",
+              "caa3ff82-51e0-4ea6-967d-24be527c22b5",
+              "89a66fc5-cafc-49f0-8c3d-54f304648c97",
+              "e876dd4a-7a36-4884-8006-808a35afd677",
+              "e0f00329-3ac9-43c3-a669-dfe0710cdf1e",
+              "26641f61-8d61-4a6a-8ba3-ecbe542857a8",
+              "c0e0a07b-3663-4c52-b8f6-c0c978b00b4e",
+              "131d34f2-6191-4aab-9756-7afaa56efb00",
+              "3d083667-430c-4a19-9ac7-96e4245d8e98",
+              "637b1d42-239a-4bd3-9b7d-3967ee3fa544",
+              "8f4f0acb-945c-4215-a9cf-e54ba256c675",
+              "67103d5b-4669-4751-9054-646d879d29ac",
+              "826d058f-2142-49c1-b076-cd6be0101507",
+              "93b8132a-49f5-4eae-b6cd-c5263e9e0ec5",
+              "e9d7706a-2a74-4d8e-8078-8a1943e8c7ca",
+              "fed41803-3d45-4a1d-8dad-b9ae34ed9237",
+              "b9a8d435-f5bc-4bca-a92e-d9408d35ccbd",
+              "cd749580-a8f0-4d6e-b313-67994992ebc9",
+              "11917705-2647-43fd-9eb1-e5f943789606",
+              "eccfed5e-49f4-481e-bad8-e7fd0d7cf032",
+              "ba2b20c0-eff1-4a46-be49-f5aae3425042",
+              "93590276-bc69-4fd9-bc79-778000d19233",
+              "c5e5197c-0070-4578-8694-5b0cb82e5d25",
+              "2a4194d9-da42-4bd4-b14d-48ca429184ac",
+              "8b1a7f43-757a-469e-85bd-b41b056a92bb",
+              "b2deecb8-62c5-4919-b32a-ee66a7a94209",
+              "98cba431-f1f0-4608-8168-3f11034f380f",
+              "e51db756-48ae-4690-9a0d-ba3edf09177b",
+              "be932942-ab96-4d56-b52f-f31fd27448ca",
+              "befd051c-74cc-4a90-a45c-5310908ec064",
+              "7c0cb8f1-38fe-400b-b5c1-2cd40f7f264c",
+              "6937bc9b-abe1-415f-8562-9e378a9d8fcb",
+              "1c515e92-fc70-4730-a80a-10821623152d"
+            ]
+          },
+          "RequestID": "4374d8bab1ee406b855851847b67e4c1",
+          "MainboardID": "0123456789abcdef0000000000000000",
+          "TimeStamp": 1795427687
+        },
+        "Topic": "sdcp/response/0123456789abcdef0000000000000000"
+      }
+    },
+    {
+      "at_ms": 376,
+      "message": {
+        "Id": "00000000000000000000000000000000",
+        "Data": {
+          "Cmd": 324,
+          "Data": {
+            "active_canvas_id": 0,
+            "active_tray_id": -1,
+            "auto_refill": 1,
+            "canvas_list": [],
+            "Ack": 0
+          },
+          "RequestID": "e9d9b21ad5124d11b4c1a1755b9b9481",
+          "MainboardID": "0123456789abcdef0000000000000000",
+          "TimeStamp": 1795427697
+        },
+        "Topic": "sdcp/response/0123456789abcdef0000000000000000"
+      }
+    }
+  ]
+}

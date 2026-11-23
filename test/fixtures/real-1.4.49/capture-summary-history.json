@@ -1,0 +1,20 @@
+{
+  "host": "192.168.1.50",
+  "started": "2026-11-23 09:55:44",
+  "timings_ms": {
+    "ws_connect": 2170,
+    "cmd-000-status.json": 68,
+    "cmd-001-attributes.json": 136,
+    "cmd-320-history-ids.json": 220,
+    "cmd-321-history-detail-1.json": 159,
+    "cmd-321-history-detail-2.json": 110,
+    "cmd-321-history-detail-3.json": 122,
+    "cmd-324-material.json": 134
+  },
+  "errors": [],
+  "CurrentStatus": [
+    0
+  ],
+  "history_ids": 50,
+  "total_seconds": 8.8
+}

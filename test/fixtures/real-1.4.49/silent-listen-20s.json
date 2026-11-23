@@ -1,0 +1,6 @@
+{
+  "note": "After one Cmd 0 and one Cmd 1, nothing was sent for 20 s (no ping either). Every message received is listed.",
+  "seconds": 20,
+  "count": 0,
+  "messages": []
+}

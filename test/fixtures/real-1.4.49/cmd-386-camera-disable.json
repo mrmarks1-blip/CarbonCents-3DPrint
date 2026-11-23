@@ -1,0 +1,170 @@
+{
+  "cmd": 386,
+  "request_data": {
+    "Enable": 0
+  },
+  "request_envelope": {
+    "Id": "",
+    "Data": {
+      "Cmd": 386,
+      "Data": {
+        "Enable": 0
+      },
+      "RequestID": "6e96e45f7c6b4b9c89cd6d2d572c6cb5",
+      "MainboardID": "0123456789abcdef0000000000000000",
+      "TimeStamp": 1795427717078,
+      "From": 1
+    }
+  },
+  "reply_ms": 154,
+  "reply": {
+    "Id": "00000000000000000000000000000000",
+    "Data": {
+      "Cmd": 386,
+      "Data": {
+        "Ack": 0
+      },
+      "RequestID": "6e96e45f7c6b4b9c89cd6d2d572c6cb5",
+      "MainboardID": "0123456789abcdef0000000000000000",
+      "TimeStamp": 1795427717
+    },
+    "Topic": "sdcp/response/0123456789abcdef0000000000000000"
+  },
+  "pushed_meanwhile": [
+    {
+      "at_ms": 0,
+      "message": {
+        "Attributes": {
+          "Name": "Centauri Carbon",
+          "MachineName": "Centauri Carbon",
+          "BrandName": "ELEGOO",
+          "ProtocolVersion": "V3.0.0",
+          "FirmwareVersion": "V1.4.49",
+          "XYZsize": "218.88x128.88x220",
+          "MainboardIP": "192.168.1.50",
+          "MainboardMAC": "AA:BB:CC:DD:EE:FF",
+          "MainboardID": "0123456789abcdef0000000000000000",
+          "SDCPStatus": 0,
+          "MaximumCloudSDCPSercicesAllowed": 0,
+          "NumberOfCloudSDCPServicesConnected": 0,
+          "NumberOfVideoStreamConnected": 1,
+          "MaximumVideoStreamAllowed": 4,
+          "NetworkStatus": "wlan",
+          "UsbDiskStatus": 0,
+          "Capabilities": [
+            "FILE_TRANSFER",
+            "PRINT_CONTROL",
+            "VIDEO_STREAM"
+          ],
+          "SupportFileType": [
+            "gcode"
+          ],
+          "DevicesStatus": {
+            "SgStatus": 1,
+            "ZMotorStatus": 1,
+            "XMotorStatus": 1,
+            "YMotorStatus": 1
+          },
+          "CameraStatus": 1,
+          "RemainingMemory": 3706880000,
+          "TLPNoCapPos": 0,
+          "TLPStartCapPos": 0,
+          "TLPInterLayers": 0
+        },
+        "MainboardID": "0123456789abcdef0000000000000000",
+        "TimeStamp": 1795427711,
+        "Topic": "sdcp/attributes/0123456789abcdef0000000000000000"
+      }
+    },
+    {
+      "at_ms": 0,
+      "message": {
+        "Attributes": {
+          "Name": "Centauri Carbon",
+          "MachineName": "Centauri Carbon",
+          "BrandName": "ELEGOO",
+          "ProtocolVersion": "V3.0.0",
+          "FirmwareVersion": "V1.4.49",
+          "XYZsize": "218.88x128.88x220",
+          "MainboardIP": "192.168.1.50",
+          "MainboardMAC": "AA:BB:CC:DD:EE:FF",
+          "MainboardID": "0123456789abcdef0000000000000000",
+          "SDCPStatus": 0,
+          "MaximumCloudSDCPSercicesAllowed": 0,
+          "NumberOfCloudSDCPServicesConnected": 0,
+          "NumberOfVideoStreamConnected": 1,
+          "MaximumVideoStreamAllowed": 4,
+          "NetworkStatus": "wlan",
+          "UsbDiskStatus": 0,
+          "Capabilities": [
+            "FILE_TRANSFER",
+            "PRINT_CONTROL",
+            "VIDEO_STREAM"
+          ],
+          "SupportFileType": [
+            "gcode"
+          ],
+          "DevicesStatus": {
+            "SgStatus": 1,
+            "ZMotorStatus": 1,
+            "XMotorStatus": 1,
+            "YMotorStatus": 1
+          },
+          "CameraStatus": 1,
+          "RemainingMemory": 3706880000,
+          "TLPNoCapPos": 0,
+          "TLPStartCapPos": 0,
+          "TLPInterLayers": 0
+        },
+        "MainboardID": "0123456789abcdef0000000000000000",
+        "TimeStamp": 1795427716,
+        "Topic": "sdcp/attributes/0123456789abcdef0000000000000000"
+      }
+    },
+    {
+      "at_ms": 157,
+      "message": {
+        "Attributes": {
+          "Name": "Centauri Carbon",
+          "MachineName": "Centauri Carbon",
+          "BrandName": "ELEGOO",
+          "ProtocolVersion": "V3.0.0",
+          "FirmwareVersion": "V1.4.49",
+          "XYZsize": "218.88x128.88x220",
+          "MainboardIP": "192.168.1.50",
+          "MainboardMAC": "AA:BB:CC:DD:EE:FF",
+          "MainboardID": "0123456789abcdef0000000000000000",
+          "SDCPStatus": 0,
+          "MaximumCloudSDCPSercicesAllowed": 0,
+          "NumberOfCloudSDCPServicesConnected": 0,
+          "NumberOfVideoStreamConnected": 0,
+          "MaximumVideoStreamAllowed": 4,
+          "NetworkStatus": "wlan",
+          "UsbDiskStatus": 0,
+          "Capabilities": [
+            "FILE_TRANSFER",
+            "PRINT_CONTROL",
+            "VIDEO_STREAM"
+          ],
+          "SupportFileType": [
+            "gcode"
+          ],
+          "DevicesStatus": {
+            "SgStatus": 1,
+            "ZMotorStatus": 1,
+            "XMotorStatus": 1,
+            "YMotorStatus": 1
+          },
+          "CameraStatus": 1,
+          "RemainingMemory": 3706880000,
+          "TLPNoCapPos": 0,
+          "TLPStartCapPos": 0,
+          "TLPInterLayers": 0
+        },
+        "MainboardID": "0123456789abcdef0000000000000000",
+        "TimeStamp": 1795427717,
+        "Topic": "sdcp/attributes/0123456789abcdef0000000000000000"
+      }
+    }
+  ]
+}

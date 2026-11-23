@@ -1,0 +1,34 @@
+{
+  "cmd": 324,
+  "request_data": {},
+  "request_envelope": {
+    "Id": "",
+    "Data": {
+      "Cmd": 324,
+      "Data": {},
+      "RequestID": "0a3f931088544976a9efb9f20f1939d6",
+      "MainboardID": "0123456789abcdef0000000000000000",
+      "TimeStamp": 1795427751864,
+      "From": 1
+    }
+  },
+  "reply_ms": 134,
+  "reply": {
+    "Id": "00000000000000000000000000000000",
+    "Data": {
+      "Cmd": 324,
+      "Data": {
+        "active_canvas_id": 0,
+        "active_tray_id": -1,
+        "auto_refill": 1,
+        "canvas_list": [],
+        "Ack": 0
+      },
+      "RequestID": "0a3f931088544976a9efb9f20f1939d6",
+      "MainboardID": "0123456789abcdef0000000000000000",
+      "TimeStamp": 1795427751
+    },
+    "Topic": "sdcp/response/0123456789abcdef0000000000000000"
+  },
+  "pushed_meanwhile": []
+}

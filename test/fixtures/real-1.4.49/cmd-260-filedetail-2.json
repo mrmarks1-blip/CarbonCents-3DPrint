@@ -1,0 +1,49 @@
+{
+  "cmd": 260,
+  "request_data": {
+    "Url": "/local/ECC_0.4_Model Name 004_PLA _0.2_1h2m.gcode"
+  },
+  "request_envelope": {
+    "Id": "",
+    "Data": {
+      "Cmd": 260,
+      "Data": {
+        "Url": "/local/ECC_0.4_Model Name 004_PLA _0.2_1h2m.gcode"
+      },
+      "RequestID": "b3695dee4a034ba893b49caebf52ed5f",
+      "MainboardID": "0123456789abcdef0000000000000000",
+      "TimeStamp": 1795427677743,
+      "From": 1
+    }
+  },
+  "reply_ms": 8826,
+  "reply": {
+    "Id": "00000000000000000000000000000000",
+    "Data": {
+      "Cmd": 260,
+      "Data": {
+        "Ack": 0,
+        "FileInfo": {
+          "Thumbnail": "http://192.168.1.50:80/thumbnail/ECC_0.4_Model Name 004_PLA _0.2_1h2m.gcode.png",
+          "EstTime": 2216,
+          "EstWeight": 18.85,
+          "TotalLayers": 101,
+          "ColorNum": 1,
+          "AmsNum": 1,
+          "ColorMapping": [
+            {
+              "color": "#26A69A",
+              "ams_id": "0",
+              "tray_id": "00"
+            }
+          ]
+        }
+      },
+      "RequestID": "b3695dee4a034ba893b49caebf52ed5f",
+      "MainboardID": "0123456789abcdef0000000000000000",
+      "TimeStamp": 1795427677
+    },
+    "Topic": "sdcp/response/0123456789abcdef0000000000000000"
+  },
+  "pushed_meanwhile": []
+}
