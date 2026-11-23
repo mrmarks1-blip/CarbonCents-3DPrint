@@ -232,7 +232,22 @@ export function adjustZ(delta: number) {
     flash(msg, true)
     return Promise.resolve(false)
   }
-  return act(`Z offset ${delta > 0 ? '+' : ''}${delta.toFixed(2)} mm`, (b) => b.adjustZ(delta))
+  return act(`Z offset ${delta > 0 ? '+' : ''}${delta.toFixed(Math.abs(delta * 100 - Math.round(delta * 100)) > 1e-6 ? 3 : 2)} mm`, (b) => b.adjustZ(delta))
+}
+
+/** The Z offset values the app will allow on this connection: ±Z_LIMIT around the value seen on connecting. */
+export function zRange(): { min: number; max: number } | null {
+  if (track.zBaseline === null) return null
+  return { min: Math.round((track.zBaseline - Z_LIMIT) * 1000) / 1000, max: Math.round((track.zBaseline + Z_LIMIT) * 1000) / 1000 }
+}
+
+/** Move the Z offset to an absolute value (sent as one change from the current value). */
+export function setZ(target: number) {
+  const cur = state.value.zOffset
+  if (cur === null) return Promise.resolve(false)
+  const delta = Math.round((target - cur) * 1000) / 1000
+  if (delta === 0) return Promise.resolve(true)
+  return adjustZ(delta)
 }
 
 export const ACTIONS: Record<ActionId, { label: string; danger?: boolean; run: () => unknown }> = {

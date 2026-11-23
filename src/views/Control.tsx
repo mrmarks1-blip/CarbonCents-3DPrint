@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks'
-import { act, adjustZ, backend, conn, state } from '../store'
+import { act, adjustZ, backend, conn, setZ, state, zRange } from '../store'
+import { ZWheel } from './ZWheel'
 
 export function Control() {
   const s = state.value
@@ -21,6 +22,10 @@ export function Control() {
             <button class="btn grow num" disabled={off || s.zOffset === null} onClick={() => adjustZ(d)}>{d > 0 ? '+' : ''}{d.toFixed(2)}</button>
           ))}
         </div>
+        <details class="zw-more" open>
+          <summary>Fine tune (wheel or type a value)</summary>
+          <ZWheel current={s.zOffset} min={zRange()?.min ?? -0.3} max={zRange()?.max ?? 0.3} disabled={off} onApply={setZ} />
+        </details>
         <p class="dim small">Minus moves the nozzle closer to the plate (more squish); plus moves it away. Change in small steps and watch the first layer.</p>
         {caps.zOffset === 'experimental' && (
           <div class="banner small">

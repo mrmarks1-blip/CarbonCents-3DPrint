@@ -151,3 +151,18 @@ details summary { cursor: pointer; font-weight: 600; min-height: 36px; display: 
 table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 td, th { text-align: left; padding: 6px 8px 6px 0; border-top: 1px solid var(--line); vertical-align: top; }
 .item .thumb { width: 100%; max-height: 140px; object-fit: contain; border-radius: 10px; background: var(--panel2); }
+
+/* Z offset wheel */
+.zw { display: grid; gap: 10px; }
+.zw-wheel { position: relative; overflow: hidden; touch-action: none; user-select: none; cursor: ns-resize; border: 1px solid var(--line); border-radius: 12px; background: var(--bg);
+  -webkit-mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent); mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent); }
+.zw-wheel:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.zw[aria-disabled="true"] .zw-wheel { opacity: 0.4; cursor: default; }
+.zw-band { position: absolute; left: 8px; right: 8px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 14%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); pointer-events: none; }
+.zw-rows { will-change: transform; }
+.zw-row { height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; color: var(--dim); }
+.zw-row.mid { color: var(--text); font-weight: 700; font-size: 1.45rem; }
+.zw-row.now::after { content: '●'; color: var(--ok); font-size: 0.6rem; margin-left: 8px; }
+.zw-unit { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+.zw-more summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
+.zw-more[open] summary { margin-bottom: 8px; }
