@@ -12,6 +12,7 @@ export class DemoBackend implements Backend {
   }
   private s: PrinterState = emptyState()
   private timer = 0
+  private starting = 0
   private prep = 0
   private files: FileEntry[] = [
     { path: '/local/benchy_PLA_0.2.gcode', name: 'benchy_PLA_0.2.gcode', size: 3_400_000, modified: now() - 86400, layers: 240 },
@@ -25,7 +26,9 @@ export class DemoBackend implements Backend {
   connect() {
     this.ev.conn('connecting')
     this.s = { ...emptyState(), phase: 'idle', detail: 'Idle', zOffset: 0.02, flowPct: 100, pos: [128, 128, 10], temps: { nozzle: 24, nozzleTarget: 0, bed: 23, bedTarget: 0, chamber: 24 } }
-    setTimeout(() => {
+    clearTimeout(this.starting)
+    this.starting = window.setTimeout(() => {
+      clearInterval(this.timer)
       this.ev.conn('connected')
       this.ev.info({ backend: 'demo', name: 'Demo printer', firmware: 'simulated', mainboardId: 'demo', ocPatched: false })
       this.ev.log('ok', 'Demo printer connected. Nothing here reaches a real printer.')
@@ -33,7 +36,12 @@ export class DemoBackend implements Backend {
     }, 400)
   }
   close() {
+    clearTimeout(this.starting)
     clearInterval(this.timer)
+  }
+  reconnect() {
+    this.close()
+    this.connect()
   }
 
   private tick() {

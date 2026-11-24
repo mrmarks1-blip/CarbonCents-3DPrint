@@ -116,7 +116,8 @@ How it works, and why:
 - Printer `TimeStamp` is seconds, not ms. Idle `PrintInfo` keeps the last job's layer / tick numbers with an empty `Filename`.
 - Status oddities already handled in `sdcp.ts`: the firmware spells it `CurrenCoord`; `ZOffset` carries float noise
   (`1e-14`); `PrintInfo.Status` 9 with the old layer counts lingers after a finished job.
-- Z offset write is absolute, and an exact `0` is accepted. Sending back the printer's own noisy `1e-14` reading is ignored.
+- Z offset write is absolute, and an exact `0` is accepted. Values in 0.001 mm steps are accepted and shown on the
+  touchscreen (owner report, 2026-11-24). Whether the firmware applies sub-0.01 mm moves physically is not known. Sending back the printer's own noisy `1e-14` reading is ignored.
 - `/usb` with no stick returns `Ack: -1`. Cmd 134 returns `Ack: 0` when there is no power-loss job. Cmd 324 returns an
   empty `canvas_list` without a multi-colour unit.
 - Camera: USB 05a3:9230, 640x360 MJPEG, about 33 KB per frame; Cmd 386 `{Enable:1}` must be sent first. Frame rate is
@@ -141,9 +142,16 @@ How it works, and why:
 
 ## 6. Known problems in the app
 
-- **No dead-link check.** When the printer's network link drops, the header keeps saying "Connected" and commands
-  just time out. It needs something like: no status reply for 3 polls, then mark offline and reconnect. The 8 s
-  timeout message should say the link may have dropped.
+- **Fixed: no dead-link check.** `src/printer/link.ts` now replaces a connection that has been silent for 12 s
+  (60 s with the app in the background), abandons connect attempts after 15 s, and on returning to the app or
+  regaining a network asks for status and reconnects at once if nothing comes back within 3.5 s. Reconnecting is
+  only a new WebSocket; it sends no command. `npm run e2e` covers it with the fake printer's `/__silence` switch.
+- **Why the app disconnected so often (2026-11-24 analysis).** Most likely, in order: (1) half-dead sockets after
+  wifi power-save / phone sleep were never noticed (fixed above); (2) Android freezes the page in the background,
+  so the reconnect timer itself stalled until the back-off ran out (fixed: reconnect on resume); (3) every control
+  reconnect also restarted the camera, and the printer holds on to closed video viewers, so blips used up camera
+  slots (fixed: the camera stream is independent of the control connection and is never duplicated); (4) the
+  printer's own `wlan0 lan disconnected` flapping (below), which the app cannot fix but now recovers from quickly.
 - **Files tab failed twice against the real printer** ("did not answer command 258 within 8s"). The printer's log
   shows it did answer; the reply was lost because the printer's link dropped. During that test the firmware logged
   `wlan0 lan connected` then `wlan0 lan disconnected` about every 20 s, while the kernel and `wpa_cli` reported a

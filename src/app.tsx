@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'preact/hooks'
-import { conn, connect, dueTasks, info, issues, settings, toast } from './store'
+import { useEffect, useRef, useState } from 'preact/hooks'
+import { isNative, permission, requestPermission } from './features/notify'
+import { conn, connect, dueTasks, info, issues, question, reconnectNow, settings, toast } from './store'
 import { Care } from './views/Care'
+import { FloatingCamera, PinnedCamera } from './views/CameraView'
 import { Console } from './views/Console'
 import { Control } from './views/Control'
 import { Dashboard } from './views/Dashboard'
@@ -16,20 +18,42 @@ const TABS: [id: string, label: string, icon: string][] = [
   ['settings', 'Settings', 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2'],
 ]
 
+const PULL = 64 // px of pull needed to reconnect
+
 export function App() {
   const [tab, setTab] = useState(settings.value.host || settings.value.backend === 'demo' ? 'home' : 'settings')
   useEffect(() => void connect(), [])
+  useEffect(() => void askForNotificationsOnce(), [])
+  const pull = usePullToReconnect()
   const problems = issues.value.filter((i) => i.level !== 'info').length
   const badge: Record<string, number> = { home: problems, care: dueTasks.value.length }
-  const title = info.value?.name ?? (settings.value.backend === 'demo' ? 'Demo printer' : settings.value.host || 'Centauri Control')
+  const s = settings.value
+  const setUp = !!s.host || s.backend === 'demo'
+  const title = info.value?.name ?? (s.backend === 'demo' ? 'Demo printer' : s.host || 'Centauri Control')
+  const view = s.camView
+  const down = setUp && conn.value !== 'connected'
 
   return (
-    <div class="shell">
+    <div class={`shell pin-${view}`}>
       <header class="top">
-        <span class={`dot ${conn.value}`} title={conn.value} />
-        <h1>{title}</h1>
-        <span class="dim small">{{ idle: 'Not set up', connecting: 'Connecting…', connected: 'Connected', closed: 'Offline, retrying' }[conn.value]}</span>
+        <div class="top-row">
+          <span class={`dot ${conn.value}`} title={conn.value} />
+          <h1>{title}</h1>
+          {down ? (
+            <button class="btn sm reconnect" onClick={reconnectNow}>
+              {conn.value === 'connecting' ? 'Connecting…' : 'Offline'} · Reconnect
+            </button>
+          ) : (
+            <span class="dim small">{{ idle: 'Not set up', connecting: 'Connecting…', connected: 'Connected', closed: 'Offline, retrying' }[conn.value]}</span>
+          )}
+        </div>
+        {view === 'top' && <PinnedCamera where="top" />}
       </header>
+      {pull > 0 && (
+        <div class="pull" style={{ height: `${Math.min(pull, PULL * 1.4)}px` }} aria-hidden="true">
+          <span>{pull >= PULL ? 'Release to reconnect' : 'Pull down to reconnect'}</span>
+        </div>
+      )}
       <main>
         {tab === 'home' && <Dashboard go={setTab} />}
         {tab === 'control' && <Control />}
@@ -38,6 +62,8 @@ export function App() {
         {tab === 'care' && <Care />}
         {tab === 'settings' && <Settings go={setTab} />}
       </main>
+      {view === 'pip' && <FloatingCamera />}
+      {view === 'bottom' && <PinnedCamera where="bottom" />}
       <nav>
         {TABS.map(([id, label, icon]) => (
           <button class={tab === id ? 'on' : ''} onClick={() => setTab(id)} aria-current={tab === id ? 'page' : undefined}>
@@ -48,6 +74,94 @@ export function App() {
         ))}
       </nav>
       {toast.value && <div class={`toast ${toast.value.bad ? 'bad' : ''}`} role="status">{toast.value.text}</div>}
+      <Dialog />
     </div>
   )
+}
+
+/** The "are you sure?" dialog. Cancel has the focus, so an accidental Enter does nothing harmful. */
+function Dialog() {
+  const q = question.value
+  const cancel = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (!q) return
+    cancel.current?.focus()
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && answer(false)
+    addEventListener('keydown', key)
+    return () => removeEventListener('keydown', key)
+  }, [q])
+  if (!q) return null
+  const answer = (yes: boolean) => {
+    question.value = null
+    q.resolve(yes)
+  }
+  return (
+    <div class="modal" role="presentation" onClick={(e) => e.target === e.currentTarget && answer(false)}>
+      <div class="card" role="alertdialog" aria-modal="true" aria-labelledby="q-title" aria-describedby="q-body">
+        <b id="q-title" style="font-size:1.1rem">{q.title}</b>
+        <p id="q-body" class="dim">{q.body}</p>
+        <div class="row">
+          <button ref={cancel} class="btn grow" onClick={() => answer(false)}>Cancel</button>
+          <button class={`btn grow ${q.danger ? 'danger solid' : 'primary'}`} onClick={() => answer(true)}>{q.ok}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Drag down from the top of a page to reconnect. Returns the current pull distance. */
+function usePullToReconnect() {
+  const [dist, setDist] = useState(0)
+  useEffect(() => {
+    let start: { y: number; x: number } | null = null
+    let d = 0
+    const skip = '.cam, .pip, .pinned, .zw-wheel, .console, .modal, input, select, textarea'
+    const ts = (e: TouchEvent) => {
+      start = null
+      if (e.touches.length !== 1 || window.scrollY > 0 || (e.target as HTMLElement).closest(skip)) return
+      start = { y: e.touches[0].clientY, x: e.touches[0].clientX }
+    }
+    const tm = (e: TouchEvent) => {
+      if (!start || e.touches.length !== 1) return
+      const dy = e.touches[0].clientY - start.y
+      const dx = Math.abs(e.touches[0].clientX - start.x)
+      if (window.scrollY > 0 || dy < 0 || dx > dy) {
+        d = 0
+        setDist(0)
+        if (dy < 0 || window.scrollY > 0) start = null
+        return
+      }
+      d = dy * 0.5 // resistance, like the platform gesture
+      setDist(d)
+    }
+    const te = () => {
+      if (start && d >= PULL) reconnectNow()
+      start = null
+      d = 0
+      setDist(0)
+    }
+    addEventListener('touchstart', ts, { passive: true })
+    addEventListener('touchmove', tm, { passive: true })
+    addEventListener('touchend', te)
+    addEventListener('touchcancel', te)
+    return () => {
+      removeEventListener('touchstart', ts)
+      removeEventListener('touchmove', tm)
+      removeEventListener('touchend', te)
+      removeEventListener('touchcancel', te)
+    }
+  }, [])
+  return dist
+}
+
+/** Android app, first run: ask for notification permission once, as the setting defaults to on. */
+async function askForNotificationsOnce() {
+  if (!isNative() || !settings.value.notifications) return
+  try {
+    if (localStorage.getItem('cc.askedNotify')) return
+    localStorage.setItem('cc.askedNotify', '1')
+  } catch {
+    return
+  }
+  if ((await permission()) === 'prompt') await requestPermission()
 }

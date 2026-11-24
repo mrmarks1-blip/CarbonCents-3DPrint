@@ -38,13 +38,17 @@ export interface Settings {
   fallbackHost: string
   backend: 'auto' | 'sdcp' | 'moonraker' | 'demo'
   notifications: boolean
+  /** Where the camera lives: its card on Status, a floating player, or pinned to the top / bottom of every tab. */
+  camView: 'card' | 'pip' | 'top' | 'bottom'
+  /** Corner of the floating player. */
+  pipCorner: 'tl' | 'tr' | 'bl' | 'br'
   cam: { brightness: number; contrast: number; saturation: number; rotate: boolean; mirror: boolean }
 }
 // When this page is served by the printer itself (copied into its web root as /cc/),
 // the printer's address is the page's own address: connect with no setup.
 const selfHost = typeof location !== 'undefined' && location.protocol === 'http:' && location.pathname.startsWith('/cc') ? location.hostname : ''
 export const settings = signal<Settings>(
-  load('settings', { host: selfHost, fallbackHost: '', backend: 'auto', notifications: true, cam: { brightness: 100, contrast: 100, saturation: 100, rotate: false, mirror: false } }),
+  load('settings', { host: selfHost, fallbackHost: '', backend: 'auto', notifications: true, camView: 'card', pipCorner: 'br', cam: { brightness: 100, contrast: 100, saturation: 100, rotate: false, mirror: false } }),
 )
 effect(() => save('settings', settings.value))
 
@@ -64,6 +68,20 @@ export const info = signal<PrinterInfo | null>(null)
 export const backend = signal<Backend | null>(null)
 export const activeHost = signal('')
 export const toast = signal<{ text: string; bad: boolean } | null>(null)
+
+/** An in-app "are you sure?" dialog. Resolves true only when the person confirms. */
+export interface Question {
+  title: string
+  body: string
+  ok: string
+  danger?: boolean
+  resolve: (yes: boolean) => void
+}
+export const question = signal<Question | null>(null)
+export function ask(q: Omit<Question, 'resolve'>): Promise<boolean> {
+  question.value?.resolve(false)
+  return new Promise((resolve) => (question.value = { ...q, resolve }))
+}
 const clock = signal(Date.now())
 setInterval(() => (clock.value = Date.now()), 5000)
 
@@ -177,6 +195,15 @@ export async function connect(hostOverride?: string) {
   backend.value.connect()
 }
 
+/** Reconnect button, pull-to-reconnect: a fresh connection now, no waiting out the back-off. */
+export function reconnectNow() {
+  const b = backend.value
+  failures = 0
+  if (!b) return connect()
+  log('info', 'Reconnecting now.')
+  b.reconnect()
+}
+
 export const issues = computed(() => {
   const ctx: Context = {
     now: clock.value,
@@ -250,16 +277,36 @@ export function setZ(target: number) {
   return adjustZ(delta)
 }
 
+export async function confirmPause() {
+  const ok = await ask({
+    title: 'Pause the print?',
+    body: 'The printer finishes its current move, parks the nozzle and waits. The nozzle cools while paused, so resume reasonably soon.',
+    ok: 'Pause',
+  })
+  return ok && act('Pause', (b) => b.pause())
+}
+
+export async function confirmStop() {
+  const name = state.value.job.filename.split('/').pop()
+  const ok = await ask({
+    title: 'Stop the print?',
+    body: `${name ? `${name} will be cancelled` : 'The print will be cancelled'}. This cannot be undone: a stopped print cannot be resumed.`,
+    ok: 'Stop print',
+    danger: true,
+  })
+  return ok && act('Stop', (b) => b.stop())
+}
+
 export const ACTIONS: Record<ActionId, { label: string; danger?: boolean; run: () => unknown }> = {
-  retry: { label: 'Reconnect now', run: () => connect() },
+  retry: { label: 'Reconnect now', run: () => reconnectNow() },
   switchHost: {
     label: 'Try the other address',
     run: () => connect(activeHost.value === settings.value.host ? settings.value.fallbackHost : settings.value.host),
   },
   refresh: { label: 'Ask for status again', run: () => act('Refresh status', (b) => b.refresh()) },
-  pause: { label: 'Send Pause', run: () => act('Pause', (b) => b.pause()) },
+  pause: { label: 'Send Pause', run: () => confirmPause() },
   resume: { label: 'Send Resume', run: () => act('Resume', (b) => b.resume()) },
-  stop: { label: 'Send Stop', danger: true, run: () => confirm('Stop the print? This cannot be undone.') && act('Stop', (b) => b.stop()) },
+  stop: { label: 'Send Stop', danger: true, run: () => confirmStop() },
   heatersOff: {
     label: 'Turn heaters off',
     run: async () => (await act('Nozzle heater off', (b) => b.setNozzle(0))) && act('Bed heater off', (b) => b.setBed(0)),

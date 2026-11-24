@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks'
-import { act, adjustZ, backend, conn, setZ, state, zRange } from '../store'
+import { act, adjustZ, ask, backend, conn, setZ, state, zRange } from '../store'
 import { ZWheel } from './ZWheel'
 
 export function Control() {
@@ -88,7 +88,7 @@ export function Control() {
         <section class="card half">
           <h2>Recovery</h2>
           <div class="row">
-            <button class="btn danger grow" disabled={off} onClick={() => confirm('Emergency stop halts everything immediately and needs a firmware restart afterwards.') && act('Emergency stop', (b) => b.estop())}>Emergency stop</button>
+            <button class="btn danger grow" disabled={off} onClick={async () => (await ask({ title: 'Emergency stop?', body: 'Emergency stop halts everything immediately, abandons the print and needs a firmware restart afterwards.', ok: 'Emergency stop', danger: true })) && act('Emergency stop', (b) => b.estop())}>Emergency stop</button>
             <button class="btn grow" disabled={off} onClick={() => act('Firmware restart', (b) => b.firmwareRestart())}>Firmware restart</button>
           </div>
         </section>

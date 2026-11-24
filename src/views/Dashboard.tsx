@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'preact/hooks'
 import type { Issue } from '../features/assistant'
-import { ACTIONS, act, activeHost, backend, conn, issues, log, settings, state } from '../store'
+import { ACTIONS, act, confirmPause, confirmStop, conn, issues, settings, state } from '../store'
+import { CameraCard } from './CameraView'
 import { Bar, clock, duration } from './bits'
 
 export function Dashboard({ go }: { go: (tab: string) => void }) {
@@ -50,9 +50,9 @@ export function Dashboard({ go }: { go: (tab: string) => void }) {
             {s.phase === 'paused' ? (
               <button class="btn primary grow" onClick={() => act('Resume', (b) => b.resume())}>Resume</button>
             ) : (
-              <button class="btn grow" disabled={s.phase !== 'printing'} onClick={() => act('Pause', (b) => b.pause())}>Pause</button>
+              <button class="btn grow" disabled={s.phase !== 'printing'} onClick={() => confirmPause()}>Pause</button>
             )}
-            <button class="btn danger grow" onClick={() => ACTIONS.stop.run()}>Stop</button>
+            <button class="btn danger grow" onClick={() => confirmStop()}>Stop</button>
           </div>
         )}
       </section>
@@ -66,7 +66,7 @@ export function Dashboard({ go }: { go: (tab: string) => void }) {
 
       {issues.value.map((i) => <IssueCard key={i.id} issue={i} />)}
 
-      <Camera />
+      <CameraCard />
     </>
   )
 }
@@ -95,89 +95,6 @@ function IssueCard({ issue }: { issue: Issue }) {
           {issue.actions.map((a) => (
             <button class={`btn sm ${ACTIONS[a].danger ? 'danger' : ''}`} onClick={() => ACTIONS[a].run()}>{ACTIONS[a].label}</button>
           ))}
-        </div>
-      )}
-    </section>
-  )
-}
-
-export function Camera() {
-  const [on, setOn] = useState(true)
-  const [url, setUrl] = useState('')
-  const [msg, setMsg] = useState('Camera is off.')
-  const [tune, setTune] = useState(false)
-  const tries = useRef(0)
-  const timer = useRef(0)
-  const cam = settings.value.cam
-  const connected = conn.value === 'connected'
-
-  const startStream = async () => {
-    const b = backend.value
-    if (!b) return
-    setMsg('Starting the camera…')
-    try {
-      const u = await b.cameraUrl()
-      if (!u) return setMsg('The demo printer has no camera.')
-      setUrl(u)
-    } catch (e) {
-      const m = (e as Error).message
-      log('error', `Camera: ${m}`)
-      setMsg(m)
-    }
-  }
-  useEffect(() => {
-    clearTimeout(timer.current)
-    tries.current = 0
-    setUrl('')
-    if (on && connected) startStream()
-    else setMsg(on ? 'Waiting for the printer.' : 'Camera is off.')
-    return () => clearTimeout(timer.current)
-  }, [on, connected, activeHost.value])
-
-  const onError = () => {
-    setUrl('')
-    const n = ++tries.current
-    if (n > 5) {
-      const m = 'The camera stream keeps failing. The printer allows a handful of video viewers and can hold on to closed ones: close other viewers, or restart the printer.'
-      log('error', `Camera: ${m}`)
-      return setMsg(m)
-    }
-    const wait = Math.min(30, 3 * n)
-    setMsg(`Camera stream dropped. Retrying in ${wait}s (attempt ${n} of 5).`)
-    log('warn', `Camera stream dropped; retry ${n}/5 in ${wait}s.`)
-    timer.current = window.setTimeout(startStream, wait * 1000)
-  }
-  const setCam = (patch: Partial<typeof cam>) => (settings.value = { ...settings.value, cam: { ...cam, ...patch } })
-  const filter = `brightness(${cam.brightness}%) contrast(${cam.contrast}%) saturate(${cam.saturation}%)`
-  const transform = `${cam.rotate ? 'rotate(180deg)' : ''} ${cam.mirror ? 'scaleX(-1)' : ''}`
-
-  return (
-    <section class="card wide">
-      <div class="spread">
-        <h2>Camera</h2>
-        <div class="row tight">
-          <button class={`btn sm ${state.value.light ? 'on' : ''}`} disabled={!connected} onClick={() => act(state.value.light ? 'Light off' : 'Light on', (b) => b.setLight(!state.value.light))}>Light</button>
-          <button class={`btn sm ${tune ? 'on' : ''}`} onClick={() => setTune(!tune)}>Adjust</button>
-          <button class={`btn sm ${on ? 'on' : ''}`} onClick={() => setOn(!on)}>{on ? 'On' : 'Off'}</button>
-        </div>
-      </div>
-      <div class="cam">
-        {url ? <img src={url} alt="Live view of the print" style={{ filter, transform }} onError={onError} onLoad={() => (tries.current = 0)} /> : <div class="msg">{msg}</div>}
-      </div>
-      {tune && (
-        <div style="display:grid;gap:8px">
-          <p class="dim small">These adjust the picture as shown here. The printer's camera has no remote exposure setting on this firmware; for a dark image, switch the chamber light on.</p>
-          {(['brightness', 'contrast', 'saturation'] as const).map((k) => (
-            <label class="field">
-              <span class="spread"><span style="text-transform:capitalize">{k}</span><span class="num">{cam[k]}%</span></span>
-              <input type="range" min={40} max={250} step={5} value={cam[k]} onInput={(e) => setCam({ [k]: +e.currentTarget.value })} />
-            </label>
-          ))}
-          <div class="row">
-            <button class={`btn sm ${cam.rotate ? 'on' : ''}`} onClick={() => setCam({ rotate: !cam.rotate })}>Rotate 180°</button>
-            <button class={`btn sm ${cam.mirror ? 'on' : ''}`} onClick={() => setCam({ mirror: !cam.mirror })}>Mirror</button>
-            <button class="btn sm" onClick={() => setCam({ brightness: 100, contrast: 100, saturation: 100, rotate: false, mirror: false })}>Reset</button>
-          </div>
         </div>
       )}
     </section>

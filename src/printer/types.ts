@@ -126,6 +126,8 @@ export interface BackendEvents {
 export interface Backend {
   readonly caps: Capabilities
   connect(): void
+  /** Drop the connection and open a new one right away (Reconnect button). */
+  reconnect(): void
   close(): void
   refresh(): Promise<void>
   pause(): Promise<void>

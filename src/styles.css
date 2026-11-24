@@ -35,7 +35,7 @@
   }
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; background: var(--bg); color: var(--text); -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: var(--bg); color: var(--text); -webkit-tap-highlight-color: transparent; overscroll-behavior-y: contain; }
 h1, h2, h3, p { margin: 0; }
 h2 { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); font-weight: 600; }
 button, input, select { font: inherit; color: inherit; }
@@ -44,7 +44,9 @@ button, input, select { font: inherit; color: inherit; }
 .small { font-size: 0.85rem; }
 
 .shell { min-height: 100dvh; display: flex; flex-direction: column; }
-.top { display: flex; align-items: center; gap: 10px; padding: calc(10px + env(safe-area-inset-top)) 16px 10px; position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); }
+.top { display: grid; gap: 8px; padding: calc(10px + env(safe-area-inset-top)) 16px 10px; position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); }
+.top-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.top .reconnect { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); white-space: nowrap; flex: none; }
 .top h1 { font-size: 1.05rem; font-weight: 650; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--dim); flex: none; }
 .dot.connected { background: var(--ok); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 22%, transparent); }
@@ -123,9 +125,47 @@ label.check input { width: 20px; height: 20px; accent-color: var(--accent); }
 .issue ul { margin: 0; padding-left: 18px; color: var(--dim); font-size: 0.88rem; display: grid; gap: 4px; }
 .banner { background: color-mix(in srgb, var(--warn) 14%, var(--panel)); border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--line)); border-radius: 12px; padding: 10px 12px; font-size: 0.9rem; }
 
-.cam { position: relative; background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 16 / 9; display: grid; place-items: center; color: #9aa3b2; text-align: center; font-size: 0.9rem; }
-.cam img { width: 100%; height: 100%; object-fit: contain; display: block; }
-.cam .msg { padding: 16px; }
+.cam { position: relative; background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 16 / 9; color: #9aa3b2; text-align: center; font-size: 0.9rem; user-select: none; -webkit-user-select: none; }
+.cam-stage { position: absolute; inset: 0; transform-origin: 0 0; will-change: transform; }
+.cam img { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; }
+.cam .msg { position: absolute; inset: 0; display: grid; place-content: center; gap: 10px; padding: 16px; }
+.zoom-ui { position: absolute; right: 8px; bottom: 8px; display: flex; gap: 6px; }
+.zbtn { min-width: 36px; height: 36px; padding: 0 8px; border-radius: 10px; border: 0; background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 1.15rem; font-weight: 700; line-height: 1; cursor: pointer; display: inline-grid; place-items: center; }
+.zbtn.wide { font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.zbtn:disabled { opacity: 0.35; cursor: default; }
+.cam.compact { border-radius: 0; }
+.cam.compact .zoom-ui { right: 6px; bottom: 6px; }
+.cam.compact .zbtn { min-width: 30px; height: 30px; font-size: 1rem; }
+
+/* Where the camera lives: segmented picker */
+.seg { display: flex; background: var(--panel2); border-radius: 10px; padding: 3px; gap: 3px; }
+.seg button { flex: 1; border: 0; background: none; border-radius: 8px; min-height: 34px; font-size: 0.82rem; font-weight: 600; color: var(--dim); cursor: pointer; }
+.seg button.on { background: var(--panel); color: var(--accent); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); }
+
+/* Floating player */
+.pip { position: fixed; z-index: 15; width: min(46vw, 320px); border-radius: 12px; overflow: hidden; background: #000; box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.12); transition: left 0.18s, top 0.18s, width 0.18s; }
+.pip.big { width: min(86vw, 560px); }
+.pip.dragging { transition: none; opacity: 0.92; }
+.pip.tl, .pip.tr { top: calc(64px + env(safe-area-inset-top)); }
+.pip.bl, .pip.br { bottom: calc(76px + env(safe-area-inset-bottom)); }
+.pip.tl, .pip.bl { left: 10px; }
+.pip.tr, .pip.br { right: 10px; }
+.pip-bar { display: flex; align-items: center; gap: 4px; padding: 4px; background: #111; touch-action: none; cursor: grab; }
+.pip-bar .grip { flex: 1; height: 24px; background: radial-gradient(circle, #555 1.2px, transparent 1.5px) 0 0 / 7px 7px; opacity: 0.8; }
+.pip-bar .zbtn { min-width: 30px; height: 28px; font-size: 0.9rem; background: rgba(255, 255, 255, 0.1); }
+
+/* Pinned camera */
+.pinned { position: relative; background: #000; }
+.pinned .cam { aspect-ratio: auto; height: min(30dvh, 56.25vw); }
+.pinned.at-top { margin: 0 -16px -10px; width: calc(100% + 32px); }
+.pinned.at-bottom { position: fixed; left: 0; right: 0; bottom: calc(58px + env(safe-area-inset-bottom)); z-index: 6; border-top: 1px solid var(--line); }
+.shell.pin-bottom main { padding-bottom: calc(92px + min(30dvh, 56.25vw) + env(safe-area-inset-bottom)); }
+.pin-tools { position: absolute; top: 6px; right: 6px; display: flex; gap: 6px; }
+.pin-tools .zbtn { min-width: 30px; height: 30px; font-size: 0.95rem; }
+
+/* Pull to reconnect */
+.pull { display: grid; place-items: end center; overflow: hidden; color: var(--dim); font-size: 0.85rem; font-weight: 600; padding-bottom: 6px; }
+.btn.danger.solid { background: var(--bad); border-color: var(--bad); color: #fff; }
 
 .console { background: #0a0c10; color: #cfd6e0; border-radius: 12px; padding: 10px; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 0.78rem; line-height: 1.5; height: 52dvh; overflow-y: auto; overscroll-behavior: contain; word-break: break-word; }
 .console div { padding: 1px 0; }
@@ -145,7 +185,13 @@ label.check input { width: 20px; height: 20px; accent-color: var(--accent); }
 .toast.bad { background: var(--bad); color: #fff; }
 .modal { position: fixed; inset: 0; z-index: 30; background: rgba(0, 0, 0, 0.55); display: grid; place-items: end center; padding: 16px; }
 .modal .card { width: min(100%, 460px); margin-bottom: env(safe-area-inset-bottom); }
-@media (min-width: 900px) { .modal { place-items: center; } .toast { bottom: 24px; } }
+@media (min-width: 900px) {
+  .modal { place-items: center; } .toast { bottom: 24px; }
+  .pinned.at-bottom { left: 88px; bottom: 0; }
+  .shell.pin-bottom main { padding-bottom: calc(24px + min(30dvh, 56.25vw)); }
+  .pip.bl, .pip.br { bottom: 16px; }
+  .pip.tl, .pip.bl { left: 100px; }
+}
 .pad { display: grid; grid-template-columns: repeat(3, 56px); gap: 6px; justify-content: center; }
 details summary { cursor: pointer; font-weight: 600; min-height: 36px; display: flex; align-items: center; }
 table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }

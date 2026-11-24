@@ -78,9 +78,16 @@ function handle(cmd, d) {
   }
 }
 
-const wss = new WebSocketServer({ port: 3030, path: '/websocket', verifyClient: (_i, cb) => (wss.clients.size >= 5 ? cb(false, 500, 'too many client') : cb(true)) })
+// GET /__silence?ms=N[&refuse=1] makes every open control connection go quiet without
+// closing, like a half-dead wifi link. Connections opened afterwards work.
+let silentUntil = 0
+let refuseNew = false
+const quiet = new WeakSet()
+const wss = new WebSocketServer({ port: 3030, path: '/websocket', verifyClient: (_i, cb) => (wss.clients.size >= 5 || (refuseNew && Date.now() < silentUntil) ? cb(false, 500, 'too many client') : cb(true)) })
 wss.on('connection', (ws) => {
+  console.log('ws connection', wss.clients.size)
   ws.on('message', (raw) => {
+    if (quiet.has(ws) && Date.now() < silentUntil) return
     const text = raw.toString()
     if (text === 'ping') return ws.send('pong')
     const { Data } = JSON.parse(text)
@@ -115,6 +122,13 @@ function parseMultipart(buf, boundary) {
 
 http.createServer((req, res) => {
   const cors = process.env.CORS === '1' ? { 'Access-Control-Allow-Origin': '*' } : {}
+  if (req.url.startsWith('/__silence')) {
+    const q = new URL(req.url, 'http://x').searchParams
+    silentUntil = Date.now() + Number(q.get('ms') ?? 30000)
+    refuseNew = q.get('refuse') === '1' // ...and turn new connections away too (printer unreachable)
+    wss.clients.forEach((c) => quiet.add(c))
+    return res.writeHead(200, cors).end('ok')
+  }
   if (req.method !== 'POST' || req.url !== '/uploadFile/upload') return res.writeHead(200, { 'Content-Type': 'text/html', ...cors }).end('<h1>fake printer</h1>')
   const chunks = []
   req.on('data', (c) => chunks.push(c)).on('end', () => {
@@ -136,7 +150,9 @@ http.createServer((req, res) => {
   })
 }).listen(Number(process.env.HTTP_PORT ?? 80))
 
+let camViewers = 0
 http.createServer((_req, res) => {
+  console.log('camera viewer opened', ++camViewers)
   res.writeHead(200, { 'Content-Type': 'multipart/x-mixed-replace; boundary=--foo' })
   const t = setInterval(() => res.write(Buffer.concat([Buffer.from(`--foo\r\nContent-Type: image/jpeg\r\nContent-Length: ${frame.length}\r\n\r\n`), frame, Buffer.from('\r\n')])), 200)
   res.on('close', () => clearInterval(t))

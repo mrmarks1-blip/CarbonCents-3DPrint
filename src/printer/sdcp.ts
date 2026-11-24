@@ -15,6 +15,7 @@ import {
   type PrinterState,
   type StartOptions,
 } from './types'
+import { Link } from './link'
 
 const TOTAL_EXTRUSION_KEY = '54 6F 74 61 6C 45 78 74 72 75 73 69 6F 6E 00'
 const CHUNK = 1024 * 1024
@@ -74,7 +75,7 @@ export function parseSdcpStatus(s: Json): PrinterState {
   st.fans = { model: num(f.ModelFan), aux: num(f.AuxiliaryFan), box: num(f.BoxFan) }
   st.light = num(s.LightStatus?.SecondLight) === 1
   st.speedPct = num(pi.PrintSpeedPct ?? pi.PrintSpeed) || 100
-  // Reported with float noise (1e-14, 0.00999999999999); the printer works in 0.01 mm steps.
+  // Reported with float noise (1e-14, 0.00999999999999). Values in 0.001 mm steps are accepted and shown on the touchscreen.
   st.zOffset = typeof s.ZOffset === 'number' ? Math.round(s.ZOffset * 1000) / 1000 : null
   const coord = String(s.CurrenCoord ?? s.CurrentCoord ?? '') // sic: firmware typo
     .split(',')
@@ -104,12 +105,9 @@ export class SdcpBackend implements Backend {
     startOptions: true,
   }
 
-  private ws: WebSocket | null = null
-  private closed = false
+  private link: Link
   private mainboardId = ''
   private pending = new Map<string, { resolve: (d: Json) => void; reject: (e: Error) => void; timer: number; quiet?: boolean }>()
-  private timers: number[] = []
-  private retry = 0
   private lastStatus: Json = {}
   private zOffset: number | null = null
   private host: string
@@ -118,70 +116,41 @@ export class SdcpBackend implements Backend {
   constructor(host: string, ev: BackendEvents) {
     this.host = host
     this.ev = ev
+    this.link = new Link({
+      url: `ws://${host}:3030/websocket`,
+      ev,
+      onOpen: () => {
+        this.ev.log('ok', 'Connected. Asking the printer for its details and status.')
+        this.send(1, {}, { quiet: true }).catch(() => {})
+        this.poll()
+        this.link.every(2000, () => this.poll())
+      },
+      onMessage: (t) => this.onMessage(t),
+      onDown: () => this.rejectPending(),
+      ping: () => this.send(0, {}, { quiet: true }).catch(() => {}),
+      refusedText: (wait) =>
+        `Could not connect to ${host}:3030. Retrying in ${wait}s. Usual causes: wrong address, printer off or on another network, or all of its connection slots are in use (it allows about 5: close the Elegoo web page, the slicer's device tab and other apps).`,
+    })
   }
 
   connect() {
-    this.closed = false
-    this.open()
+    this.link.start()
   }
 
-  private open() {
-    const url = `ws://${this.host}:3030/websocket`
-    this.ev.conn('connecting')
-    this.ev.log('info', `Connecting to ${url}`)
-    let ws: WebSocket
-    try {
-      ws = new WebSocket(url)
-    } catch (e) {
-      this.ev.log('error', `The browser refused to open ${url}: ${(e as Error).message}. A page loaded over https cannot reach a printer on plain ws://; use the Android app or open this page over http on your network.`)
-      this.ev.conn('closed', 'blocked')
-      return
-    }
-    this.ws = ws
-    let opened = false
-    ws.onopen = () => {
-      opened = true
-      this.retry = 0
-      this.ev.conn('connected')
-      this.ev.log('ok', 'Connected. Asking the printer for its details and status.')
-      this.send(1, {}, { quiet: true }).catch(() => {})
-      this.poll()
-      this.timers.push(
-        window.setInterval(() => ws.readyState === 1 && ws.send('ping'), 20000),
-        window.setInterval(() => this.poll(), 2000),
-      )
-    }
-    ws.onmessage = (m) => this.onMessage(String(m.data))
-    ws.onclose = () => {
-      this.cleanup()
-      if (this.closed) return
-      const wait = Math.min(15, 2 ** this.retry++)
-      this.ev.conn('closed', opened ? 'dropped' : 'refused')
-      this.ev.log(
-        opened ? 'warn' : 'error',
-        opened
-          ? `Connection dropped. Reconnecting in ${wait}s.`
-          : `Could not connect to ${this.host}:3030. Retrying in ${wait}s. Usual causes: wrong address, printer off or on another network, or all of its connection slots are in use (it allows about 5: close the Elegoo web page, the slicer's device tab and other apps).`,
-      )
-      this.timers.push(window.setTimeout(() => !this.closed && this.open(), wait * 1000))
-    }
+  reconnect() {
+    this.link.now()
   }
 
-  private cleanup() {
-    this.timers.forEach((t) => (clearInterval(t), clearTimeout(t)))
-    this.timers = []
+  close() {
+    this.link.stop()
+  }
+
+  private rejectPending() {
     for (const p of this.pending.values()) {
       clearTimeout(p.timer)
       p.reject(new PrinterError('The connection closed before the printer answered.'))
     }
     this.pending.clear()
-  }
-
-  close() {
-    this.closed = true
-    this.cleanup()
-    this.ws?.close()
-    this.ws = null
   }
 
   private poll() {
@@ -233,18 +202,17 @@ export class SdcpBackend implements Backend {
   }
 
   private send(cmd: number, data: Json, opt: { quiet?: boolean; timeout?: number } = {}): Promise<Json> {
-    const ws = this.ws
-    if (!ws || ws.readyState !== 1) return Promise.reject(new PrinterError('Not connected to the printer.'))
+    if (!this.link.alive) return Promise.reject(new PrinterError('Not connected to the printer.'))
     const id = hex32()
     const body = { Id: '', Data: { Cmd: cmd, Data: data, RequestID: id, MainboardID: this.mainboardId, TimeStamp: Date.now(), From: 1 } }
     if (!opt.quiet) this.ev.log('tx', `Cmd ${cmd} ${JSON.stringify(data)}`)
     return new Promise((resolve, reject) => {
       const timer = window.setTimeout(() => {
         this.pending.delete(id)
-        reject(new PrinterError(`The printer did not answer command ${cmd} within ${(opt.timeout ?? 8000) / 1000}s. It may be busy or its control process may have hung.`))
+        reject(new PrinterError(`The printer did not answer command ${cmd} within ${(opt.timeout ?? 8000) / 1000}s. The wifi link may have dropped (the app reconnects by itself), or the printer is busy.`))
       }, opt.timeout ?? 8000)
       this.pending.set(id, { resolve, reject, timer, quiet: opt.quiet })
-      ws.send(JSON.stringify(body))
+      this.link.send(JSON.stringify(body))
     })
   }
 

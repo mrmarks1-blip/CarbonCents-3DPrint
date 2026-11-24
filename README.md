@@ -28,7 +28,7 @@ that were annoying in day-to-day use:
 - **It notices when the printer is stuck.** Stalled heating, a print hung in preparing /
   pausing / stopping, a print whose clock has stopped, a cold nozzle while paused, heaters
   left on after a job: the assistant spots these and offers the commands worth retrying.
-- **Z offset from the phone**, in 0.01 / 0.05 mm steps, with the value read back from the
+- **Z offset from the phone**, in 0.01 / 0.05 mm buttons or a 0.001 mm fine-tune wheel, with the value read back from the
   printer after every step so you see what the printer actually has, not what was sent.
 - **A maintenance logbook** driven by real print hours and calendar time, with reminders.
 - **A demo printer** so you can try every screen without a printer, and a **probe script**
@@ -39,9 +39,16 @@ that were annoying in day-to-day use:
 
 - Live status with progress, layer and time-remaining bars; temperatures.
 - Pause, resume, stop; nozzle and bed targets; fans; chamber light; speed mode.
-- Z offset in 0.01 / 0.05 mm steps, with read-back and a ±0.3 mm limit per connection.
+- Z offset in 0.01 / 0.05 mm steps or 0.001 mm fine tuning, with read-back and a ±0.3 mm limit per connection.
 - Send G-code files to the printer (chunked, MD5-checked), start and delete them, view print history.
-- Camera with reconnect, plus brightness / contrast / saturation / rotate applied in the app.
+- Camera with reconnect and zoom (pinch, double-tap or + / −, up to 12x), plus brightness / contrast /
+  saturation / rotate applied in the app. Show it on the Status tab, in a floating player that
+  stays on every tab, or pinned to the top or bottom of the screen. Moving it never opens a second
+  video connection to the printer.
+- Pause and Stop ask "are you sure?" first.
+- Reconnects by itself: a connection that goes silent (wifi sleep, network change, phone waking up)
+  is detected within about 14 s and replaced. Reconnect at once with the button in the header or by
+  pulling down from the top of a page.
 - A console that narrates every command and reply, and explains refusals in plain language.
 - A stuck-state assistant (see above).
 - Maintenance logbook with reminders.

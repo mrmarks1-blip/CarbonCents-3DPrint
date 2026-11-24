@@ -12,6 +12,7 @@ import {
   type Phase,
   type PrinterState,
 } from './types'
+import { Link } from './link'
 
 type Json = Record<string, any>
 
@@ -74,74 +75,78 @@ export function parseKlipper(o: Json): PrinterState {
 
 export class MoonrakerBackend implements Backend {
   readonly caps: Capabilities = { gcode: true, flow: true, estop: true, firmwareRestart: true, zOffset: 'native', speedPresets: null, startOptions: false }
-  private ws: WebSocket | null = null
-  private closed = false
+  private link: Link
   private nextId = 1
   private pending = new Map<number, { resolve: (d: any) => void; reject: (e: Error) => void }>()
   private objects: Json = {}
-  private retry = 0
-  private timer = 0
   private host: string
   private ev: BackendEvents
 
   constructor(host: string, ev: BackendEvents) {
     this.host = host
     this.ev = ev
+    this.link = new Link({
+      url: `ws://${host}/websocket`,
+      ev,
+      onOpen: () => {
+        void this.hello()
+        // Moonraker only pushes changes; ask for something small so the
+        // dead-link watchdog always hears from it.
+        this.link.every(4000, () => this.keepAlive())
+      },
+      onMessage: (t) => this.onMessage(t),
+      onDown: () => {
+        this.pending.forEach((p) => p.reject(new PrinterError('The connection closed before the printer answered.')))
+        this.pending.clear()
+      },
+      ping: () => this.keepAlive(),
+      refusedText: (wait) =>
+        `Could not connect to Moonraker on ${host}. Retrying in ${wait}s. If this page is not served from a LAN IP address, Moonraker rejects it until its origin is added to cors_domains in moonraker.conf.`,
+    })
   }
 
   connect() {
-    this.closed = false
-    this.open()
+    this.link.start()
   }
 
-  private open() {
-    const url = `ws://${this.host}/websocket`
-    this.ev.conn('connecting')
-    this.ev.log('info', `Connecting to Moonraker at ${url}`)
-    const ws = (this.ws = new WebSocket(url))
-    let opened = false
-    ws.onopen = async () => {
-      opened = true
-      this.retry = 0
-      this.ev.conn('connected')
-      try {
-        const info = await this.rpc('printer.info')
-        this.ev.info({ backend: 'moonraker', name: info.hostname ?? 'Centauri Carbon (COSMOS)', firmware: info.software_version ?? '', mainboardId: '', ocPatched: false })
-        const sub = await this.rpc('printer.objects.subscribe', { objects: Object.fromEntries(OBJECTS.map((k) => [k, null])) })
-        this.merge(sub.status ?? {})
-        this.ev.log('ok', `Connected. Klipper is ${info.state}.`)
-      } catch (e) {
-        this.ev.log('error', `Moonraker answered but Klipper is not ready: ${(e as Error).message}. Try Firmware restart.`)
-      }
+  reconnect() {
+    this.link.now()
+  }
+
+  private keepAlive() {
+    this.rpc('printer.objects.query', { objects: { webhooks: null } }).catch(() => {})
+  }
+
+  private async hello() {
+    try {
+      const info = await this.rpc('printer.info')
+      this.ev.info({ backend: 'moonraker', name: info.hostname ?? 'Centauri Carbon (COSMOS)', firmware: info.software_version ?? '', mainboardId: '', ocPatched: false })
+      const sub = await this.rpc('printer.objects.subscribe', { objects: Object.fromEntries(OBJECTS.map((k) => [k, null])) })
+      this.merge(sub.status ?? {})
+      this.ev.log('ok', `Connected. Klipper is ${info.state}.`)
+    } catch (e) {
+      this.ev.log('error', `Moonraker answered but Klipper is not ready: ${(e as Error).message}. Try Firmware restart.`)
     }
-    ws.onmessage = (m) => {
-      let msg: Json
-      try {
-        msg = JSON.parse(String(m.data))
-      } catch {
-        return
-      }
-      if (msg.id && this.pending.has(msg.id)) {
-        const p = this.pending.get(msg.id)!
-        this.pending.delete(msg.id)
-        if (msg.error) p.reject(new PrinterError(String(msg.error.message ?? 'Request failed')))
-        else p.resolve(msg.result)
-      } else if (msg.method === 'notify_status_update') this.merge(msg.params?.[0] ?? {})
-      else if (msg.method === 'notify_gcode_response') {
-        const line = String(msg.params?.[0] ?? '')
-        this.ev.log(line.startsWith('!!') ? 'error' : 'rx', line)
-      } else if (msg.method === 'notify_klippy_shutdown' || msg.method === 'notify_klippy_disconnected')
-        this.ev.log('error', 'Klipper shut down or disconnected. Read the message above, then use Firmware restart.')
+  }
+
+  private onMessage(text: string) {
+    let msg: Json
+    try {
+      msg = JSON.parse(text)
+    } catch {
+      return
     }
-    ws.onclose = () => {
-      this.pending.forEach((p) => p.reject(new PrinterError('The connection closed before the printer answered.')))
-      this.pending.clear()
-      if (this.closed) return
-      const wait = Math.min(15, 2 ** this.retry++)
-      this.ev.conn('closed', opened ? 'dropped' : 'refused')
-      this.ev.log(opened ? 'warn' : 'error', opened ? `Connection dropped. Reconnecting in ${wait}s.` : `Could not connect to Moonraker on ${this.host}. Retrying in ${wait}s. If this page is not served from a LAN IP address, Moonraker rejects it until its origin is added to cors_domains in moonraker.conf.`)
-      this.timer = window.setTimeout(() => !this.closed && this.open(), wait * 1000)
-    }
+    if (msg.id && this.pending.has(msg.id)) {
+      const p = this.pending.get(msg.id)!
+      this.pending.delete(msg.id)
+      if (msg.error) p.reject(new PrinterError(String(msg.error.message ?? 'Request failed')))
+      else p.resolve(msg.result)
+    } else if (msg.method === 'notify_status_update') this.merge(msg.params?.[0] ?? {})
+    else if (msg.method === 'notify_gcode_response') {
+      const line = String(msg.params?.[0] ?? '')
+      this.ev.log(line.startsWith('!!') ? 'error' : 'rx', line)
+    } else if (msg.method === 'notify_klippy_shutdown' || msg.method === 'notify_klippy_disconnected')
+      this.ev.log('error', 'Klipper shut down or disconnected. Read the message above, then use Firmware restart.')
   }
 
   private merge(patch: Json) {
@@ -150,20 +155,16 @@ export class MoonrakerBackend implements Backend {
   }
 
   private rpc(method: string, params?: Json): Promise<any> {
-    const ws = this.ws
-    if (!ws || ws.readyState !== 1) return Promise.reject(new PrinterError('Not connected to the printer.'))
+    if (!this.link.alive) return Promise.reject(new PrinterError('Not connected to the printer.'))
     const id = this.nextId++
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject })
-      ws.send(JSON.stringify({ jsonrpc: '2.0', method, params, id }))
+      this.link.send(JSON.stringify({ jsonrpc: '2.0', method, params, id }))
     })
   }
 
   close() {
-    this.closed = true
-    clearTimeout(this.timer)
-    this.ws?.close()
-    this.ws = null
+    this.link.stop()
   }
 
   async gcode(script: string) {
