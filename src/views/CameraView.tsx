@@ -2,6 +2,7 @@ import { signal } from '@preact/signals'
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { attachCamera, camLive, camMsg, camOn, cameraElement, restartCamera } from '../features/camera'
 import { act, conn, settings, state, type Settings } from '../store'
+import { FilamentDot, filamentCss } from './Filament'
 
 // ---- Zoom -----------------------------------------------------------------
 // One zoom shared by every view, so moving the picture keeps what you were
@@ -40,7 +41,7 @@ export function CameraStage({ compact = false }: { compact?: boolean }) {
   useEffect(() => attachCamera(stage.current!), [])
 
   const img = cameraElement()
-  img.style.filter = `brightness(${cam.brightness}%) contrast(${cam.contrast}%) saturate(${cam.saturation}%)`
+  img.style.filter = `${filamentCss()}brightness(${cam.brightness}%) contrast(${cam.contrast}%) saturate(${cam.saturation}%)`
   img.style.transform = `${cam.rotate ? 'rotate(180deg)' : ''} ${cam.mirror ? 'scaleX(-1)' : ''}`
 
   // Gestures. Pointer positions are kept as fractions of the view.
@@ -139,6 +140,7 @@ export function CameraStage({ compact = false }: { compact?: boolean }) {
           )}
         </div>
       )}
+      {camLive.value && <FilamentDot from={() => view.current} />}
       {camLive.value && (
         <div class="zoom-ui" aria-label="Zoom">
           {zoomed && <button class="zbtn wide" onClick={resetZoom} title="Back to 1x">{z.s.toFixed(1)}× ↺</button>}
@@ -200,7 +202,7 @@ export function CameraCard() {
       )}
       {tune && (
         <div style="display:grid;gap:8px">
-          <p class="dim small">Pinch, double-tap or use + and − to zoom (up to {MAX_ZOOM}×); drag to look around while zoomed. These adjust the picture as shown here only. The printer's camera has no remote exposure setting on this firmware; for a dark image, switch the chamber light on.</p>
+          <p class="dim small">Tap the colour dot on the picture to tune it for your filament colour. Pinch, double-tap or use + and − to zoom (up to {MAX_ZOOM}×); drag to look around while zoomed. These adjust the picture as shown here only. The printer's camera has no remote exposure setting on this firmware; for a dark image, switch the chamber light on.</p>
           {(['brightness', 'contrast', 'saturation'] as const).map((k) => (
             <label class="field">
               <span class="spread"><span style="text-transform:capitalize">{k}</span><span class="num">{cam[k]}%</span></span>

@@ -49,6 +49,14 @@ try {
   if ((await stageScale()) !== '1') throw new Error('reset should return to 1x')
   ok('camera zoom: double tap to 3x at the tap point, + steps 1.5x, reset')
 
+  await page.getByRole('button', { name: 'Filament colour' }).click()
+  await page.getByRole('button', { name: 'Orange' }).click()
+  await page.getByText('Highlight my filament').click()
+  await page.waitForFunction(() => document.querySelectorAll('#cc-filament feColorMatrix').length === 3 && document.querySelector('.cam img').style.filter.includes('url('))
+  await shot('filament-highlight')
+  await page.getByRole('button', { name: 'Done' }).click()
+  ok('filament colour: pick orange and highlight it (picture filter only)')
+
   const viewersBefore = (printerLog.match(/camera viewer opened/g) ?? []).length
   await page.getByRole('button', { name: 'Float' }).click()
   await page.locator('.pip .cam img').waitFor()

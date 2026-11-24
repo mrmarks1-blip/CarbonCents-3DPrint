@@ -3,6 +3,7 @@
 import { computed, effect, signal } from '@preact/signals'
 import { diagnose, type ActionId, type Context } from './features/assistant'
 import { freshTasks, recordJob, totalHours, usage, type Task } from './features/maintenance'
+import { defaultFilament, type FilamentSettings } from './features/filament'
 import { notify, scheduleReminders } from './features/notify'
 import { DemoBackend } from './printer/demo'
 import { MoonrakerBackend, probeMoonraker } from './printer/moonraker'
@@ -42,13 +43,14 @@ export interface Settings {
   camView: 'card' | 'pip' | 'top' | 'bottom'
   /** Corner of the floating player. */
   pipCorner: 'tl' | 'tr' | 'bl' | 'br'
+  filament: FilamentSettings
   cam: { brightness: number; contrast: number; saturation: number; rotate: boolean; mirror: boolean }
 }
 // When this page is served by the printer itself (copied into its web root as /cc/),
 // the printer's address is the page's own address: connect with no setup.
 const selfHost = typeof location !== 'undefined' && location.protocol === 'http:' && location.pathname.startsWith('/cc') ? location.hostname : ''
 export const settings = signal<Settings>(
-  load('settings', { host: selfHost, fallbackHost: '', backend: 'auto', notifications: true, camView: 'card', pipCorner: 'br', cam: { brightness: 100, contrast: 100, saturation: 100, rotate: false, mirror: false } }),
+  load('settings', { host: selfHost, fallbackHost: '', backend: 'auto', notifications: true, camView: 'card', pipCorner: 'br', filament: defaultFilament(), cam: { brightness: 100, contrast: 100, saturation: 100, rotate: false, mirror: false } }),
 )
 effect(() => save('settings', settings.value))
 

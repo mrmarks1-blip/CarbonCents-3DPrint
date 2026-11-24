@@ -137,3 +137,40 @@ describe('maintenance', () => {
     expect(usage(t, 90 * 86_400_000, 10)).toBe(1)
   })
 })
+
+import { canHighlight, defaultFilament, matrices } from '../src/features/filament'
+
+// Apply a 20-value feColorMatrix to an RGB pixel, clamping like a browser does.
+const apply = (values: string, [r, g, b]: number[]) => {
+  const m = values.split(' ').map(Number)
+  const row = (i: number) => Math.min(1, Math.max(0, m[i] * r + m[i + 1] * g + m[i + 2] * b + m[i + 4]))
+  return [row(0), row(5), row(10)]
+}
+const run = (ms: string[], px: number[]) => ms.reduce((p, m) => apply(m, p), px)
+
+describe('filament colour tuning', () => {
+  it('does nothing until a colour is picked', () => {
+    expect(matrices(defaultFilament())).toBeNull()
+  })
+  it('remembers slider tweaks per colour', () => {
+    const f = { ...defaultFilament(), pick: 'red', tweaks: { red: [150, 100, 100] as [number, number, number] } }
+    expect(run(matrices(f)!, [0.4, 0.4, 0.4])[0]).toBeCloseTo(0.6)
+  })
+  it('highlight keeps the filament colour and greys out the rest', () => {
+    const f = { ...defaultFilament(), pick: 'custom', custom: '#ff8000', highlight: true, tweaks: { custom: [100, 100, 100] as [number, number, number] } }
+    const ms = matrices(f)!
+    expect(ms).toHaveLength(3)
+    const [r, g, b] = run(ms, [1, 0.5, 0])
+    expect(r - b).toBeGreaterThan(0.6) // orange stays strongly orange
+    const blue = run(ms, [0.1, 0.3, 0.9])
+    expect(Math.max(...blue) - Math.min(...blue)).toBeLessThan(0.02) // the opposite colour turns grey
+    const grey = run(ms, [0.5, 0.5, 0.5])
+    expect(Math.max(...grey) - Math.min(...grey)).toBeLessThan(0.02)
+  })
+  it('highlight is not offered for white, grey or black', () => {
+    expect(canHighlight('#f4f4f4')).toBe(false)
+    expect(canHighlight('#1d1f23')).toBe(false)
+    expect(canHighlight('#ff7a1a')).toBe(true)
+    expect(matrices({ ...defaultFilament(), pick: 'white', highlight: true })).toHaveLength(1)
+  })
+})

@@ -3,6 +3,7 @@ import { isNative, permission, requestPermission } from './features/notify'
 import { conn, connect, dueTasks, info, issues, question, reconnectNow, settings, toast } from './store'
 import { Care } from './views/Care'
 import { FloatingCamera, PinnedCamera } from './views/CameraView'
+import { FilamentFilter, FilamentSheet } from './views/Filament'
 import { Console } from './views/Console'
 import { Control } from './views/Control'
 import { Dashboard } from './views/Dashboard'
@@ -74,6 +75,8 @@ export function App() {
         ))}
       </nav>
       {toast.value && <div class={`toast ${toast.value.bad ? 'bad' : ''}`} role="status">{toast.value.text}</div>}
+      <FilamentSheet />
+      <FilamentFilter />
       <Dialog />
     </div>
   )
@@ -115,7 +118,7 @@ function usePullToReconnect() {
   useEffect(() => {
     let start: { y: number; x: number } | null = null
     let d = 0
-    const skip = '.cam, .pip, .pinned, .zw-wheel, .console, .modal, input, select, textarea'
+    const skip = '.cam, .pip, .sheet, .pinned, .zw-wheel, .console, .modal, input, select, textarea'
     const ts = (e: TouchEvent) => {
       start = null
       if (e.touches.length !== 1 || window.scrollY > 0 || (e.target as HTMLElement).closest(skip)) return
