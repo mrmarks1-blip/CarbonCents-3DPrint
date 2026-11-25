@@ -57,6 +57,8 @@ export function Dashboard({ go }: { go: (tab: string) => void }) {
         )}
       </section>
 
+      <CameraCard />
+
       <section class="card third">
         <h2>Temperatures</h2>
         <Temp label="Nozzle" v={s.temps.nozzle} target={s.temps.nozzleTarget} max={320} />
@@ -66,7 +68,6 @@ export function Dashboard({ go }: { go: (tab: string) => void }) {
 
       {issues.value.map((i) => <IssueCard key={i.id} issue={i} />)}
 
-      <CameraCard />
     </>
   )
 }

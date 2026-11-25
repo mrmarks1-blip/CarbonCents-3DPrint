@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks'
 import { isNative, permission, requestPermission } from './features/notify'
 import { conn, connect, dueTasks, info, issues, question, reconnectNow, settings, toast } from './store'
 import { Care } from './views/Care'
-import { FloatingCamera, PinnedCamera } from './views/CameraView'
+import { FloatingCamera, PinnedCamera, ZoomViewer } from './views/CameraView'
 import { FilamentFilter, FilamentSheet } from './views/Filament'
 import { Console } from './views/Console'
 import { Control } from './views/Control'
@@ -25,7 +25,9 @@ export function App() {
   const [tab, setTab] = useState(settings.value.host || settings.value.backend === 'demo' ? 'home' : 'settings')
   useEffect(() => void connect(), [])
   useEffect(() => void askForNotificationsOnce(), [])
-  const pull = usePullToReconnect()
+  const mainRef = useRef<HTMLElement>(null)
+  const pull = usePullToReconnect(mainRef)
+  useEffect(() => void mainRef.current?.scrollTo(0, 0), [tab])
   const problems = issues.value.filter((i) => i.level !== 'info').length
   const badge: Record<string, number> = { home: problems, care: dueTasks.value.length }
   const s = settings.value
@@ -34,28 +36,29 @@ export function App() {
   const view = s.camView
   const down = setUp && conn.value !== 'connected'
 
+  const connecting = conn.value === 'connecting'
+
   return (
     <div class={`shell pin-${view}`}>
       <header class="top">
-        <div class="top-row">
-          <span class={`dot ${conn.value}`} title={conn.value} />
-          <h1>{title}</h1>
-          {down ? (
-            <button class="btn sm reconnect" onClick={reconnectNow}>
-              {conn.value === 'connecting' ? 'Connecting…' : 'Offline'} · Reconnect
-            </button>
-          ) : (
-            <span class="dim small">{{ idle: 'Not set up', connecting: 'Connecting…', connected: 'Connected', closed: 'Offline, retrying' }[conn.value]}</span>
-          )}
-        </div>
-        {view === 'top' && <PinnedCamera where="top" />}
+        <span class={`dot ${conn.value}`} title={conn.value} />
+        <h1>{title}</h1>
+        {down ? (
+          <button class={`btn sm reconnect ${connecting ? 'busy' : ''}`} onClick={reconnectNow} aria-label="Reconnect">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5" /></svg>
+            {connecting ? 'Reconnecting…' : 'Reconnect'}
+          </button>
+        ) : (
+          <span class="dim small">{conn.value === 'idle' ? 'Not set up' : 'Connected'}</span>
+        )}
       </header>
+      {view === 'top' && <PinnedCamera where="top" />}
       {pull > 0 && (
         <div class="pull" style={{ height: `${Math.min(pull, PULL * 1.4)}px` }} aria-hidden="true">
           <span>{pull >= PULL ? 'Release to reconnect' : 'Pull down to reconnect'}</span>
         </div>
       )}
-      <main>
+      <main ref={mainRef}>
         {tab === 'home' && <Dashboard go={setTab} />}
         {tab === 'control' && <Control />}
         {tab === 'files' && <Files />}
@@ -75,6 +78,7 @@ export function App() {
         ))}
       </nav>
       {toast.value && <div class={`toast ${toast.value.bad ? 'bad' : ''}`} role="status">{toast.value.text}</div>}
+      <ZoomViewer />
       <FilamentSheet />
       <FilamentFilter />
       <Dialog />
@@ -113,25 +117,26 @@ function Dialog() {
 }
 
 /** Drag down from the top of a page to reconnect. Returns the current pull distance. */
-function usePullToReconnect() {
+function usePullToReconnect(mainRef: { current: HTMLElement | null }) {
   const [dist, setDist] = useState(0)
   useEffect(() => {
     let start: { y: number; x: number } | null = null
     let d = 0
-    const skip = '.cam, .pip, .sheet, .pinned, .zw-wheel, .console, .modal, input, select, textarea'
+    const top = () => mainRef.current?.scrollTop ?? 0
+    const skip = '.cam, .pip, .zv, .sheet, .pinned, .zw-wheel, .console, .modal, input, select, textarea'
     const ts = (e: TouchEvent) => {
       start = null
-      if (e.touches.length !== 1 || window.scrollY > 0 || (e.target as HTMLElement).closest(skip)) return
+      if (e.touches.length !== 1 || top() > 0 || (e.target as HTMLElement).closest(skip)) return
       start = { y: e.touches[0].clientY, x: e.touches[0].clientX }
     }
     const tm = (e: TouchEvent) => {
       if (!start || e.touches.length !== 1) return
       const dy = e.touches[0].clientY - start.y
       const dx = Math.abs(e.touches[0].clientX - start.x)
-      if (window.scrollY > 0 || dy < 0 || dx > dy) {
+      if (top() > 0 || dy < 0 || dx > dy) {
         d = 0
         setDist(0)
-        if (dy < 0 || window.scrollY > 0) start = null
+        if (dy < 0 || top() > 0) start = null
         return
       }
       d = dy * 0.5 // resistance, like the platform gesture

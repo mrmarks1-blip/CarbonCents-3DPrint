@@ -41,8 +41,8 @@ export interface Settings {
   notifications: boolean
   /** Where the camera lives: its card on Status, a floating player, or pinned to the top / bottom of every tab. */
   camView: 'card' | 'pip' | 'top' | 'bottom'
-  /** Corner of the floating player. */
-  pipCorner: 'tl' | 'tr' | 'bl' | 'br'
+  /** Centre of the floating player as fractions of the screen; null = default spot. */
+  pipPos: { cx: number; cy: number } | null
   filament: FilamentSettings
   cam: { brightness: number; contrast: number; saturation: number; rotate: boolean; mirror: boolean }
 }
@@ -50,7 +50,7 @@ export interface Settings {
 // the printer's address is the page's own address: connect with no setup.
 const selfHost = typeof location !== 'undefined' && location.protocol === 'http:' && location.pathname.startsWith('/cc') ? location.hostname : ''
 export const settings = signal<Settings>(
-  load('settings', { host: selfHost, fallbackHost: '', backend: 'auto', notifications: true, camView: 'card', pipCorner: 'br', filament: defaultFilament(), cam: { brightness: 100, contrast: 100, saturation: 100, rotate: false, mirror: false } }),
+  load('settings', { host: selfHost, fallbackHost: '', backend: 'auto', notifications: true, camView: 'card', pipPos: null, filament: defaultFilament(), cam: { brightness: 100, contrast: 100, saturation: 100, rotate: false, mirror: false } }),
 )
 effect(() => save('settings', settings.value))
 
