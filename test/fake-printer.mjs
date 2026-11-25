@@ -122,6 +122,10 @@ function parseMultipart(buf, boundary) {
 
 http.createServer((req, res) => {
   const cors = process.env.CORS === '1' ? { 'Access-Control-Allow-Origin': '*' } : {}
+  if (req.url === '/__runout') {
+    if (S.print === 13) S.print = 6 // the printer pauses itself, as on a filament runout
+    return res.writeHead(200, cors).end('ok')
+  }
   if (req.url.startsWith('/__silence')) {
     const q = new URL(req.url, 'http://x').searchParams
     silentUntil = Date.now() + Number(q.get('ms') ?? 30000)

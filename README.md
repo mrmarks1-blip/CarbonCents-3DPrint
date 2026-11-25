@@ -46,6 +46,10 @@ that were annoying in day-to-day use:
   stays on every tab, or pinned to the top or bottom of the screen. Moving it never opens a second
   video connection to the printer.
 - Pause and Stop ask "are you sure?" first.
+- If the printer pauses a print by itself (usually a filament runout), you get an alert saying the
+  filament may have run out, even with the app on screen.
+- Camera colour tuning for your filament colour, with an optional highlight that greys out
+  everything else so stray strands stand out (picture only, nothing is sent to the printer).
 - Reconnects by itself: a connection that goes silent (wifi sleep, network change, phone waking up)
   is detected within about 14 s and replaced. Reconnect at once with the button in the header or by
   pulling down from the top of a page.

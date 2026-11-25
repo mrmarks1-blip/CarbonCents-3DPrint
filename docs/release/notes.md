@@ -1,6 +1,21 @@
 A phone-first control app for the Elegoo Centauri Carbon. It talks to the printer directly on your
 local network: no cloud account, no relay server, no telemetry.
 
+## New in v0.2.0
+
+- **Camera zoom**: pinch, double-tap or + / −, up to 12x. Drag to look around while zoomed.
+- **Camera anywhere**: on the Status tab, in a floating mini player on every tab (drag it to any
+  corner), or pinned to the top or bottom of the screen.
+- **Filament colour tuning**: tap the colour dot on the picture, pick your filament colour, and
+  optionally highlight it so stray strands stand out.
+- **Are you sure?** before Pause and Stop.
+- **Filament runout alert**: a pause the app did not ask for is reported as a possible runout.
+- **Much better reconnecting**: a dead connection is noticed within about 14 s and replaced, the app
+  reconnects as soon as you come back to it, there is a Reconnect button at the top right while
+  offline, and you can pull down from the top of a page to reconnect.
+- **Notifications on Android**: if Android has blocked them, Settings now says so and opens the
+  right system page to turn them on.
+
 ## Which download do I want?
 
 | File | For |

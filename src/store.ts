@@ -88,7 +88,8 @@ const clock = signal(Date.now())
 setInterval(() => (clock.value = Date.now()), 5000)
 
 let failures = 0
-const track = { key: '', phaseSince: Date.now(), progressKey: '', progressSince: Date.now(), heatGap: Infinity, heatSince: Date.now(), printNozzleTarget: 0, zBaseline: null as number | null }
+const PAUSE_GRACE_MS = 90_000 // a pause within this long of pressing Pause counts as ours
+const track = { pauseAskedAt: 0, key: '', phaseSince: Date.now(), progressKey: '', progressSince: Date.now(), heatGap: Infinity, heatSince: Date.now(), printNozzleTarget: 0, zBaseline: null as number | null }
 
 export const ledger = signal<Record<string, number>>(loadRaw('ledger', {}))
 export const printHours = computed(() => totalHours(ledger.value))
@@ -131,11 +132,25 @@ function onState(next: PrinterState) {
   if (next.phase === 'printing' && next.temps.nozzleTarget > 0) track.printNozzleTarget = next.temps.nozzleTarget
   if (track.zBaseline === null && next.zOffset !== null) track.zBaseline = next.zOffset
 
-  if (prev.phase !== next.phase && prev.phase !== 'offline' && settings.value.notifications) {
-    const name = next.job.filename || 'Print'
-    if (next.phase === 'complete') notify('Print finished', name)
-    else if (next.phase === 'error') notify('Printer error', next.error ?? next.detail)
-    else if (next.phase === 'paused' && document.hidden) notify('Print paused', name)
+  if (prev.phase !== next.phase && prev.phase !== 'offline') {
+    const name = next.job.filename.split('/').pop() || 'Print'
+    const on = settings.value.notifications
+    if (next.phase === 'complete') on && notify('Print finished', name)
+    else if (next.phase === 'error') on && notify('Printer error', next.error ?? next.detail)
+    else if (next.phase === 'paused') {
+      // The live status does not say why a print paused. A pause this app did
+      // not ask for is most often a filament runout (or the touchscreen), so
+      // say so, and alert even with the app on screen.
+      const ours = now - track.pauseAskedAt < PAUSE_GRACE_MS
+      track.pauseAskedAt = 0 // one Pause press explains one pause, not a later runout
+      if (ours) on && document.hidden && notify('Print paused', name)
+      else {
+        const why = 'Paused by the printer, not from this app. The filament may have run out (or it was paused on the touchscreen). Check the printer, load filament if needed, then Resume.'
+        log('warn', `${name}: ${why}`)
+        flash('Print paused by the printer: filament may have run out', true)
+        on && notify('Print paused: filament may have run out', `${name}. Paused by the printer, not from the app. Check the printer and its touchscreen.`)
+      }
+    }
   }
   const j = next.job
   if (j.taskId && j.elapsed > 60 && (next.phase !== prev.phase || Math.floor(j.elapsed / 300) !== Math.floor(prev.job.elapsed / 300))) {
@@ -285,7 +300,11 @@ export async function confirmPause() {
     body: 'The printer finishes its current move, parks the nozzle and waits. The nozzle cools while paused, so resume reasonably soon.',
     ok: 'Pause',
   })
-  return ok && act('Pause', (b) => b.pause())
+  if (!ok) return false
+  track.pauseAskedAt = Date.now()
+  const done = await act('Pause', (b) => b.pause())
+  if (!done) track.pauseAskedAt = 0
+  return done
 }
 
 export async function confirmStop() {

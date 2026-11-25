@@ -148,6 +148,13 @@ try {
   await page.locator('.chip', { hasText: 'Paused' }).waitFor()
   await page.getByRole('button', { name: 'Resume' }).click()
   await page.locator('.chip', { hasText: 'Printing' }).waitFor()
+  await fetch('http://127.0.0.1/__runout')
+  await page.locator('.toast', { hasText: 'filament may have run out' }).waitFor()
+  await shot('runout-pause')
+  await page.getByRole('button', { name: 'Resume' }).click()
+  await page.locator('.chip', { hasText: 'Printing' }).waitFor()
+  ok('a pause the app did not ask for is reported as a possible filament runout')
+
   await page.getByRole('button', { name: 'Stop' }).click()
   await page.locator('.modal').getByRole('button', { name: 'Cancel' }).click()
   await page.waitForTimeout(1500)
