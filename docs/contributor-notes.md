@@ -19,6 +19,7 @@ versions may differ. Addresses are placeholders: `192.168.1.50` stands for the p
 | `test/fixtures/real-1.4.49/` | Real replies captured from the printer, with identifiers replaced. Its README has the detail. |
 | `tools/probe.py` | Read-only probe, dependency-free Python. Contains reusable `WS` and `Sdcp` classes. |
 | `tools/capture.py` | Captures real replies as fixtures. Has a fixed WebSocket reader (`WS2`). |
+| `tools/bedmesh.py` | Read-only bed mesh / probing report from the printer log (via the root shell), as HTML heatmaps. |
 | `tools/rsh.py` | Runs a shell command on the printer as root through the OpenCentauri shell on port 4567. |
 | `tools/printer_install.py` | Installs the build on the printer at `/cc/` (shipped in releases as `install_on_printer.py`). See section 4. |
 | `docs/protocol-commands.md` | SDCP command table taken from the printer's own stock web UI and binary. |

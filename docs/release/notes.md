@@ -1,6 +1,16 @@
 A phone-first control app for the Elegoo Centauri Carbon. It talks to the printer directly on your
 local network: no cloud account, no relay server, no telemetry.
 
+## New in v0.2.2
+
+- **Warm up, then level and print** (Print dialog): heats only the bed, waits until it is at
+  temperature, soaks for the minutes you choose, then starts the print with auto-levelling. The
+  nozzle stays cold, so no PETG oozes onto it before probing. Countdown, Cancel and Start now on Status.
+- **Pause after layer N**, in the Print dialog or on Status during a print, to check the first layers.
+- **Bed mesh report** (`tools/bedmesh.py`, in the printer package as well): a read-only script for
+  OpenCentauri-patched printers that draws every levelling run from the printer's log as a heatmap,
+  marks points where the probe had to retry, and compares the last two runs.
+
 ## New in v0.2.1
 
 - **Camera right under the status** on the Status tab.

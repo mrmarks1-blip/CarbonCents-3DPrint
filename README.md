@@ -46,6 +46,10 @@ that were annoying in day-to-day use:
   stays on every tab and goes exactly where you drag it, or pinned to the top or bottom of the screen. Moving it never opens a second
   video connection to the printer.
 - Pause and Stop ask "are you sure?" first.
+- Warm up the bed before levelling (bed only, then a soak, then the print starts with auto-levelling),
+  and pause after a chosen layer to check the first layers.
+- `tools/bedmesh.py`: a read-only bed mesh and probing report for OpenCentauri-patched printers
+  (`python tools/bedmesh.py --host <printer-ip>`, writes `bedmesh.html`).
 - If the printer pauses a print by itself (usually a filament runout), you get an alert saying the
   filament may have run out, even with the app on screen.
 - Camera colour tuning for your filament colour, with an optional highlight that greys out

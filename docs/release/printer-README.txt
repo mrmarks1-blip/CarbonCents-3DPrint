@@ -32,3 +32,13 @@ Good to know
 - The printer has no password. Never port-forward it to the internet; use a VPN
   (Tailscale, WireGuard) to reach it from outside your home.
 - Unofficial hobby project, not affiliated with Elegoo or OpenCentauri. Use at your own risk.
+
+Bed mesh report (optional)
+--------------------------
+bedmesh.py draws the printer's recent levelling runs as heatmaps and marks probe
+points that needed retries. It only reads files on the printer and changes nothing.
+
+    python bedmesh.py --host <printer-ip>
+
+It writes bedmesh.html next to it; open that in a browser. Needs rsh.py in the
+same folder (included). Best run with the printer idle.

@@ -73,6 +73,7 @@ jobs:
           cp android/app/build/outputs/apk/debug/app-debug.apk "release/CentauriControl-${V}.apk"
           cp -r dist pkg/printer/www
           cp tools/printer_install.py pkg/printer/install_on_printer.py
+          cp tools/bedmesh.py tools/rsh.py pkg/printer/
           cp docs/release/printer-README.txt pkg/printer/README.txt
           (cd pkg/printer && zip -qr "../../release/CentauriControl-${V}-printer.zip" .)
           cp -r dist/. pkg/web/
