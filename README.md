@@ -41,9 +41,9 @@ that were annoying in day-to-day use:
 - Pause, resume, stop; nozzle and bed targets; fans; chamber light; speed mode.
 - Z offset in 0.01 / 0.05 mm steps or 0.001 mm fine tuning, with read-back and a ±0.3 mm limit per connection.
 - Send G-code files to the printer (chunked, MD5-checked), start and delete them, view print history.
-- Camera with reconnect and zoom (pinch, double-tap or + / −, up to 12x), plus brightness / contrast /
+- Camera with reconnect and full-screen zoom (pinch, double-tap or +, up to 12x), plus brightness / contrast /
   saturation / rotate applied in the app. Show it on the Status tab, in a floating player that
-  stays on every tab, or pinned to the top or bottom of the screen. Moving it never opens a second
+  stays on every tab and goes exactly where you drag it, or pinned to the top or bottom of the screen. Moving it never opens a second
   video connection to the printer.
 - Pause and Stop ask "are you sure?" first.
 - If the printer pauses a print by itself (usually a filament runout), you get an alert saying the
