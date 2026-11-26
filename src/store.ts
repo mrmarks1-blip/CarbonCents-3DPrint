@@ -294,6 +294,11 @@ export function setZ(target: number) {
   return adjustZ(delta)
 }
 
+/** Mark a pause as asked for by the app (so it is not reported as a possible runout). */
+export function markPauseAsked() {
+  track.pauseAskedAt = Date.now()
+}
+
 export async function confirmPause() {
   const ok = await ask({
     title: 'Pause the print?',

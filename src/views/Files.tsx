@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 import type { FileEntry, HistoryEntry, StartOptions } from '../printer/types'
 import { act, backend, conn, info, log, state } from '../store'
 import { Bar, duration, size } from './bits'
+import { setPauseAfter, startWithWarmup } from '../features/prep'
 
 export function Files() {
   const [files, setFiles] = useState<FileEntry[] | null>(null)
@@ -109,6 +110,17 @@ export function Files() {
 
 function StartDialog({ file, options, onClose }: { file: FileEntry; options: boolean; onClose: () => void }) {
   const [o, setO] = useState<StartOptions>({ levelling: true, timelapse: false, plateSide: 0 })
+  const [warm, setWarm] = useState(false)
+  const [bedT, setBedT] = useState(80)
+  const [mins, setMins] = useState(10)
+  const [pauseAt, setPauseAt] = useState('')
+  const go = async () => {
+    onClose()
+    const n = parseInt(pauseAt, 10)
+    if (warm) {
+      if (await startWithWarmup(file, o, bedT, mins)) setPauseAfter(n > 0 ? n : null)
+    } else if (await act(`Start ${file.name}`, (b) => b.start(file, o))) setPauseAfter(n > 0 ? n : null)
+  }
   return (
     <div class="modal" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div class="card">
@@ -116,7 +128,7 @@ function StartDialog({ file, options, onClose }: { file: FileEntry; options: boo
         <p class="dim small">Check the build plate is clear and filament is loaded.</p>
         {options && (
           <>
-            <label class="check"><input type="checkbox" checked={o.levelling} onChange={(e) => setO({ ...o, levelling: e.currentTarget.checked })} /> Auto bed levelling before printing</label>
+            <label class="check"><input type="checkbox" checked={o.levelling || warm} disabled={warm} onChange={(e) => setO({ ...o, levelling: e.currentTarget.checked })} /> Auto bed levelling before printing</label>
             <label class="check"><input type="checkbox" checked={o.timelapse} onChange={(e) => setO({ ...o, timelapse: e.currentTarget.checked })} /> Record a timelapse</label>
             <label class="field">Build plate side (each side has its own Z offset)
               <select value={o.plateSide} onChange={(e) => setO({ ...o, plateSide: +e.currentTarget.value as 0 | 1 })}>
@@ -126,9 +138,28 @@ function StartDialog({ file, options, onClose }: { file: FileEntry; options: boo
             </label>
           </>
         )}
+        <label class="check"><input type="checkbox" checked={warm} onChange={(e) => setWarm(e.currentTarget.checked)} /> Warm up the bed first, then level and print</label>
+        {warm && (
+          <div class="row tight">
+            <label class="field grow">Bed
+              <select value={bedT} onChange={(e) => setBedT(+e.currentTarget.value)}>
+                {[60, 65, 70, 75, 80, 85, 90, 100].map((t) => <option value={t}>{t} °C</option>)}
+              </select>
+            </label>
+            <label class="field grow">Soak for
+              <select value={mins} onChange={(e) => setMins(+e.currentTarget.value)}>
+                {[3, 5, 10, 15, 20, 30].map((m) => <option value={m}>{m} min</option>)}
+              </select>
+            </label>
+          </div>
+        )}
+        {warm && <p class="dim small">Only the bed heats; the nozzle stays cold so no PETG oozes onto it before probing. Once the bed is at temperature and has soaked, the print starts with auto-levelling. Set the bed to the temperature your slicer profile uses. Keep the app open until it starts.</p>}
+        <label class="field">Pause after layer (optional, to inspect the first layers)
+          <input type="number" inputMode="numeric" min={1} placeholder="Off, e.g. 2" value={pauseAt} onInput={(e) => setPauseAt(e.currentTarget.value)} />
+        </label>
         <div class="row">
           <button class="btn grow" onClick={onClose}>Cancel</button>
-          <button class="btn primary grow" onClick={() => (act(`Start ${file.name}`, (b) => b.start(file, o)), onClose())}>Start print</button>
+          <button class="btn primary grow" onClick={go}>{warm ? 'Warm up and print' : 'Start print'}</button>
         </div>
       </div>
     </div>

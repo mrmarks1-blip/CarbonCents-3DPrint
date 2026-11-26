@@ -1,6 +1,8 @@
 import type { Issue } from '../features/assistant'
 import { ACTIONS, act, confirmPause, confirmStop, conn, issues, settings, state } from '../store'
 import { CameraCard } from './CameraView'
+import { cancelWarmup, pauseAfter, setPauseAfter, soak, soakLeft, startNow } from '../features/prep'
+import { useEffect, useState } from 'preact/hooks'
 import { Bar, clock, duration } from './bits'
 
 export function Dashboard({ go }: { go: (tab: string) => void }) {
@@ -20,6 +22,8 @@ export function Dashboard({ go }: { go: (tab: string) => void }) {
           <button class="btn primary" onClick={() => go('settings')}>Open settings</button>
         </div>
       )}
+
+      <WarmupCard />
 
       <section class="card hero wide">
         <div class="spread">
@@ -55,6 +59,7 @@ export function Dashboard({ go }: { go: (tab: string) => void }) {
             <button class="btn danger grow" onClick={() => confirmStop()}>Stop</button>
           </div>
         )}
+        {(active || pauseAfter.value) && <PauseAfter />}
       </section>
 
       <CameraCard />
@@ -99,5 +104,60 @@ function IssueCard({ issue }: { issue: Issue }) {
         </div>
       )}
     </section>
+  )
+}
+
+function WarmupCard() {
+  const s = soak.value
+  const [, tick] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => tick((n) => n + 1), 1000)
+    return () => clearInterval(t)
+  }, [])
+  if (!s) return null
+  const bed = state.value.temps.bed
+  const left = soakLeft(s)
+  return (
+    <section class="card wide warmup">
+      <div class="spread">
+        <h2>Warm-up before levelling</h2>
+        <span class="chip preparing">{s.phase === 'heating' ? 'Heating bed' : s.phase === 'soaking' ? 'Soaking' : 'Starting'}</span>
+      </div>
+      <div class="file">{s.file.name}</div>
+      {s.phase === 'heating' ? (
+        <>
+          <span class="dim">Bed <b class="num">{bed.toFixed(0)}</b> of <span class="num">{s.target}</span> °C</span>
+          <Bar value={(bed / s.target) * 100} />
+        </>
+      ) : (
+        <>
+          <span class="dim">Bed <b class="num">{bed.toFixed(0)}</b> °C · starts with auto-levelling in <b class="num">{Math.floor((left ?? 0) / 60)}:{String((left ?? 0) % 60).padStart(2, '0')}</b></span>
+          <Bar value={100 - ((left ?? 0) / (s.minutes * 60)) * 100} tone="ok" />
+        </>
+      )}
+      <div class="row">
+        <button class="btn grow" onClick={() => cancelWarmup(true)} disabled={s.phase === 'starting'}>Cancel (bed off)</button>
+        <button class="btn primary grow" onClick={startNow} disabled={s.phase === 'starting' || conn.value !== 'connected'}>Start now</button>
+      </div>
+    </section>
+  )
+}
+
+function PauseAfter() {
+  const p = pauseAfter.value
+  const [v, setV] = useState('')
+  if (p)
+    return (
+      <div class="row tight small">
+        <span class="grow">Will pause after layer <b class="num">{p.layer}</b> so you can check it.</span>
+        <button class="btn sm" onClick={() => setPauseAfter(null)}>Don't</button>
+      </div>
+    )
+  const n = parseInt(v, 10)
+  return (
+    <div class="row tight">
+      <input class="grow" type="number" inputMode="numeric" min={1} placeholder={`Pause after layer… (now ${state.value.job.layer})`} value={v} onInput={(e) => setV(e.currentTarget.value)} />
+      <button class="btn sm" disabled={!(n > state.value.job.layer)} onClick={() => (setPauseAfter(n), setV(''))}>Set</button>
+    </div>
   )
 }
