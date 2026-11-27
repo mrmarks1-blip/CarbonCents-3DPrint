@@ -248,3 +248,12 @@ svg.mesh .picked { stroke: var(--accent); stroke-width: 4; stroke-dasharray: non
 svg.mesh .pickable { cursor: pointer; }
 .pointinfo { background: var(--panel2); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; }
 .bedreport .areas { margin: 0; padding-left: 18px; display: grid; gap: 2px; }
+.bedreport .relevel { display: grid; gap: 8px; }
+.bedreport .relevel[open] { background: var(--panel2); border-radius: 10px; padding: 10px 12px; }
+.bedreport .relevel summary { cursor: pointer; }
+.bedreport .job { border: 1px solid var(--accent); }
+.stills { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stills:empty { display: none; }
+.stills figure { margin: 0; display: grid; gap: 2px; }
+.stills canvas { width: 100%; height: auto; border-radius: 8px; }
+.stills figcaption { font-size: 12px; color: var(--dim); }

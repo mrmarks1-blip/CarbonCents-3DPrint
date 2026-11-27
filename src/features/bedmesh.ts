@@ -26,8 +26,21 @@ export interface Run {
   retried: ProbePoint[]
   worstSpread: number
 }
+/** A short burst of probing at a few points: a retake job, Z homing, or a manual probe. */
+export interface Spot {
+  x: number
+  y: number
+  samples: number[]
+  /** Median of the samples. */
+  z: number
+  /** Highest minus lowest sample, mm. */
+  spread: number
+  t: number // ms since boot
+  thisBoot: boolean
+}
 export interface Report {
   runs: Run[]
+  spots: Spot[]
   bootEpoch: number | null
   mesh: { file: string; rows: number[][] } | null
   meshFiles: string[]
@@ -69,7 +82,8 @@ export function parseProbes(text: string): Ev[] {
   return out
 }
 
-export function splitRuns(events: Ev[]): Run[] {
+/** Probe events split into bursts (a gap of 2 min or a printer restart ends one). */
+function groupEvents(events: Ev[]) {
   const groups: { boot: number; ev: Ev[] }[] = []
   let cur: Ev[] = []
   let last: number | null = null
@@ -85,6 +99,11 @@ export function splitRuns(events: Ev[]): Run[] {
     last = e.t
   }
   if (cur.length) groups.push({ boot, ev: cur })
+  return { groups, boot }
+}
+
+export function splitRuns(events: Ev[]): Run[] {
+  const { groups, boot } = groupEvents(events)
   const runs: Run[] = []
   for (const { boot: b, ev: g } of groups) {
     const pts = new Map<string, { x: number; y: number; samples: number[]; retries: number; spread: number }>()
@@ -106,6 +125,39 @@ export function splitRuns(events: Ev[]): Run[] {
     runs.push(analyse({ thisBoot: b === boot, t0: g[0].t, t1: g[g.length - 1].t, points, range: 0, edgeMinusCentre: 0, retried: [], worstSpread: 0 }))
   }
   return runs
+}
+
+/** Points probed in bursts too small to be a levelling run. */
+export function spotChecks(events: Ev[]): Spot[] {
+  const { groups, boot } = groupEvents(events)
+  const out: Spot[] = []
+  for (const { boot: b, ev: g } of groups) {
+    const pts = new Map<string, Spot>()
+    for (const e of g) {
+      if (e.kind !== 'p') continue
+      const k = key(e.x, e.y)
+      if (!pts.has(k)) pts.set(k, { x: e.x, y: e.y, samples: [], z: 0, spread: 0, t: e.t, thisBoot: b === boot })
+      pts.get(k)!.samples.push(e.z)
+    }
+    if (pts.size >= MIN_POINTS) continue // a levelling run
+    for (const p of pts.values()) out.push({ ...p, z: median(p.samples), spread: Math.max(...p.samples) - Math.min(...p.samples) })
+  }
+  return out
+}
+
+/** Spot checks logged after `since` (ms since 1970) near the given points, newest per point. */
+export function retakeResults(spots: Spot[], bootEpoch: number | null, since: number, points: { x: number; y: number }[], tolMm = 1.5) {
+  const after = spots.filter((s) => s.thisBoot && bootEpoch !== null && (bootEpoch + s.t / 1000) * 1000 >= since - 60_000)
+  return points.map((p) => ({ point: p, spot: after.filter((s) => Math.hypot(s.x - p.x, s.y - p.y) <= tolMm).pop() ?? null }))
+}
+
+/** What a retake says about a point, compared with the levelling run. */
+export function judgeRetake(runZ: number, s: Spot) {
+  const change = s.z - runZ
+  const noisy = s.spread > 0.02
+  if (noisy) return `The ${s.samples.length} new readings still disagree by ${s.spread.toFixed(3)} mm: something is still on the nozzle or the plate here. Wipe the plate spot and the nozzle by hand and retake.`
+  if (Math.abs(change) > 0.05) return `The new readings agree with each other but differ from the levelling run by ${change >= 0 ? '+' : ''}${change.toFixed(3)} mm: the original reading was probably dirt. Re-level so the mesh uses clean readings.`
+  return `The new readings agree with each other and with the levelling run (${change >= 0 ? '+' : ''}${change.toFixed(3)} mm): the reading is real and the bed is shaped like that here. Look under the plate for grit, or leave it to the mesh to compensate.`
 }
 
 function analyse(r: Run): Run {
@@ -226,8 +278,8 @@ export async function readReport(host: string, logMb = 4): Promise<Report> {
     }
   }
   // Last: the biggest read. If it is slow, the small ones above are already done.
-  const runs = splitRuns(parseProbes(await read(host, 'probe-log', undefined, logMb)))
-  return { runs, bootEpoch: Number.isFinite(bootEpoch) ? bootEpoch : null, mesh, meshFiles }
+  const events = parseProbes(await read(host, 'probe-log', undefined, logMb))
+  return { runs: splitRuns(events), spots: spotChecks(events), bootEpoch: Number.isFinite(bootEpoch) ? bootEpoch : null, mesh, meshFiles }
 }
 
 export function when(ms: number, bootEpoch: number | null, thisBoot = true) {
@@ -292,3 +344,39 @@ export function explainPoint(p: ProbePoint, xs: number[], ys: number[]) {
   if (lines.length === 1) lines.push('Within normal range.')
   return lines
 }
+
+// ---- Job files for re-levelling and retakes (see levelling.ts) -------------
+
+export const WIPE_C = 170 // nozzle temperature for wiping: soft enough to clear PLA/PETG strings
+export const PROBE_C = 140 // probing temperature: warm, but too cool to ooze
+export const SAMPLES = 5
+export const MAX_RETAKE = 8
+const PARK = 'G1 X202 Y264.5 F6000' // where the toolhead rests when idle (back right)
+
+export interface Pt {
+  x: number
+  y: number
+}
+
+/** An empty job: started with auto-levelling on, the printer levels and stops. */
+export function relevelGcode() {
+  return ['; Centauri Control: level only, nothing is printed.', '; Started with auto-levelling on; the printer levels, then finds no moves.', 'M400', ''].join('\n')
+}
+
+/** Home, wipe, then probe each point several times. */
+export function retakeGcode(points: Pt[], samples = SAMPLES) {
+  const g = [
+    `; Centauri Control: wipe the nozzle, then re-probe ${points.length} point(s). Nothing is printed.`,
+    'G90',
+    'G28',
+    `M109 S${WIPE_C} ; soften anything on the nozzle tip`,
+    'M729 ; nozzle clean on the wiper',
+    `M104 S${PROBE_C}`,
+    'G4 P20000 ; let it cool towards the probing temperature',
+  ]
+  for (const p of points.slice(0, MAX_RETAKE))
+    g.push('G1 Z5 F600', `G1 X${p.x.toFixed(1)} Y${p.y.toFixed(1)} F6000`, `PROBE_ACCURACY SAMPLES=${samples}`)
+  g.push('G1 Z10 F600', PARK, 'M104 S0', 'M400', '')
+  return g.join('\n')
+}
+

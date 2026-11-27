@@ -1,6 +1,8 @@
-import { useState } from 'preact/hooks'
-import { OFF_MM, advice, axis, canRead, diffRuns, explainPoint, problemAreas, readReport, when, type ProbePoint, type Report } from '../features/bedmesh'
-import { activeHost, info, log, state } from '../store'
+import { useEffect, useRef, useState } from 'preact/hooks'
+import { OFF_MM, advice, axis, canRead, diffRuns, explainPoint, judgeRetake, problemAreas, readReport, retakeResults, when, type ProbePoint, type Report, type Run } from '../features/bedmesh'
+import { MAX_RETAKE, PROBE_C, SAMPLES, WIPE_C, busy as jobBusy, clearJob, job, relevel, retake, snaps, snapshot, type Pt } from '../features/levelling'
+import { soak, soakLeft } from '../features/prep'
+import { act, activeHost, ask, conn, info, log, state } from '../store'
 
 /** Blue for low, red for high, near-white around 0. */
 function colour(v: number, span: number) {
@@ -77,6 +79,12 @@ export function BedReport() {
     }
   }
 
+  const j = job.value
+  const blocked = !host || host === 'demo' || printing || jobBusy() || conn.value !== 'connected'
+  useEffect(() => {
+    if (j?.phase === 'done' && host) load()
+  }, [j?.phase])
+
   if (!canRead())
     return (
       <section class="card">
@@ -103,6 +111,8 @@ export function BedReport() {
         <h2>Bed levelling report</h2>
         <button class="btn sm" onClick={load} disabled={busy || !host || host === 'demo' || printing}>{busy ? 'Reading…' : rep ? 'Read again' : 'Read from printer'}</button>
       </div>
+      <Relevel disabled={blocked} />
+      <JobPanel run={rep?.runs[rep.runs.length - 1]} rep={rep} />
       {!rep && !err && (
         <p class="dim small">
           Draws each recent auto-levelling run from the printer's log as a heat map, marks points where the probe had to retry, and compares the last two runs. Read-only:
@@ -126,10 +136,16 @@ export function BedReport() {
                 {when(run.t0, rep.bootEpoch, run.thisBoot)} · {run.points.length} points · range {run.range.toFixed(3)} mm · edges {(run.edgeMinusCentre >= 0 ? '+' : '') + run.edgeMinusCentre.toFixed(3)} mm vs centre · {run.retried.length} retried
               </p>
               <Areas run={run.points} />
+              {shown === 0 && <RetakeFlagged run={run} disabled={blocked} />}
               <Heatmap points={run.points} label="Probed heights" pick={(n) => setPicked(picked === n ? null : n)} picked={picked ?? undefined} />
               {picked !== null && run.points[picked] && (
                 <div class="pointinfo small" role="status">
                   {explainPoint(run.points[picked], axis(run.points, 'x'), axis(run.points, 'y')).map((l) => <p>{l}</p>)}
+                  {shown === 0 && (
+                    <button class="btn sm" disabled={blocked} onClick={() => confirmRetake([run.points[picked]])}>
+                      Wipe the nozzle and retake this point
+                    </button>
+                  )}
                 </div>
               )}
               {picked === null && <p class="dim small">Tap a square for its readings.</p>}
@@ -168,5 +184,133 @@ function Areas({ run }: { run: ProbePoint[] }) {
       {a.high.length > 0 && <li><b>High:</b> {list(a.high)}</li>}
       {a.retried.length > 0 && <li><b>Probe retried:</b> {list(a.retried)}</li>}
     </ul>
+  )
+}
+
+/** Points worth a second look: probe retried, or far from the average. Worst first. */
+function suspects(run: Run): ProbePoint[] {
+  const score = (p: ProbePoint) => (p.retries ? 1 + p.spread : 0) + Math.max(0, Math.abs(p.rel) - OFF_MM) * 10
+  return run.points.filter((p) => score(p) > 0).sort((a, b) => score(b) - score(a)).slice(0, MAX_RETAKE)
+}
+
+async function confirmRetake(points: Pt[]) {
+  const where = points.map((p) => `X ${p.x.toFixed(0)} Y ${p.y.toFixed(0)}`).join(', ')
+  const yes = await ask({
+    title: `Wipe and retake ${points.length} point${points.length > 1 ? 's' : ''}?`,
+    body:
+      `The printer will home, heat the nozzle to ${WIPE_C} °C, wipe it on its wiper, cool towards ${PROBE_C} °C and probe ${where}, ${SAMPLES} times each. Nothing is printed and the bed is not heated. ` +
+      'Experimental: this has not been run on a real printer yet. Clear the plate and stay near the printer; Stop on the touchscreen or in the app ends it.',
+    ok: 'Start the retake',
+  })
+  if (yes) retake(points)
+}
+
+function RetakeFlagged({ run, disabled }: { run: Run; disabled: boolean }) {
+  const pts = suspects(run)
+  if (!pts.length) return null
+  return (
+    <button class="btn sm" disabled={disabled} onClick={() => confirmRetake(pts)}>
+      Wipe the nozzle and retake the {pts.length} worst point{pts.length > 1 ? 's' : ''}
+    </button>
+  )
+}
+
+function Relevel({ disabled }: { disabled: boolean }) {
+  const [bed, setBed] = useState(60)
+  const [mins, setMins] = useState(10)
+  const cold = async () =>
+    (await ask({
+      title: 'Re-level now (cold bed)?',
+      body: 'Starts a level-only job: the printer runs its normal auto-levelling (heats the nozzle, wipes it, probes the whole bed), then stops without printing. The bed is not heated. Clear the plate first. Experimental: the level-only job has not been run on a real printer yet.',
+      ok: 'Start levelling',
+    })) && relevel(null)
+  const warm = async () =>
+    (await ask({
+      title: `Warm up to ${bed} °C, then re-level?`,
+      body: `Heats the bed to ${bed} °C, waits ${mins} min for the plate to settle, then runs the printer's normal auto-levelling without printing. Keep the app open during the warm-up. Clear the plate first. Experimental: the level-only job has not been run on a real printer yet.`,
+      ok: 'Start the warm-up',
+    })) && relevel({ bed, minutes: mins })
+  return (
+    <details class="relevel">
+      <summary class="small"><b>Re-level the bed</b>{' '}(cold, or after a warm-up)</summary>
+      <p class="dim small">Level once cold and once warm, then compare the two under "Change since the run before". The report reads itself again when a run finishes.</p>
+      <button class="btn sm" disabled={disabled} onClick={cold}>Re-level now (cold)</button>
+      <div class="row tight">
+        <label class="field grow small">Bed °C
+          <select value={bed} onChange={(e) => setBed(+e.currentTarget.value)}>{[55, 60, 70, 80, 90].map((t) => <option value={t}>{t}</option>)}</select>
+        </label>
+        <label class="field grow small">Soak, min
+          <select value={mins} onChange={(e) => setMins(+e.currentTarget.value)}>{[5, 10, 15, 20].map((t) => <option value={t}>{t}</option>)}</select>
+        </label>
+      </div>
+      <button class="btn sm" disabled={disabled} onClick={warm}>Warm up, then re-level</button>
+    </details>
+  )
+}
+
+function Stills() {
+  const box = useRef<HTMLDivElement>(null)
+  const list = snaps.value
+  useEffect(() => {
+    const el = box.current
+    if (!el) return
+    el.replaceChildren(
+      ...list.map((s) => {
+        const f = document.createElement('figure')
+        const cap = document.createElement('figcaption')
+        cap.textContent = `${s.label} · ${new Date(s.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+        f.append(s.canvas, cap)
+        return f
+      }),
+    )
+  }, [list])
+  return (
+    <>
+      <div class="stills" ref={box} />
+      <button class="btn sm" onClick={() => snapshot('Snapshot') || log('warn', 'No camera picture to copy: turn the camera on (Status tab, or Float) first.')}>Take a camera still</button>
+      <p class="dim small">Stills are copied from the live camera so you can compare before and after. Look for strings on the nozzle and debris near the points being probed.</p>
+    </>
+  )
+}
+
+function JobPanel({ run, rep }: { run?: Run; rep: Report | null }) {
+  const j = job.value
+  if (!j) return null
+  const s = soak.value
+  const left = s ? soakLeft(s) : null
+  const status =
+    j.phase === 'warming' && s
+      ? s.phase === 'heating'
+        ? `Heating the bed to ${s.target} °C (now ${state.value.temps.bed.toFixed(0)} °C).`
+        : left !== null
+          ? `Soaking: ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} left, then levelling.`
+          : 'Starting the levelling…'
+      : j.message
+  const results = j.kind === 'retake' && j.phase === 'done' && rep ? retakeResults(rep.spots, rep.bootEpoch, j.startedAt, j.points) : []
+  const runZ = (p: Pt) => run?.points.find((q) => Math.hypot(q.x - p.x, q.y - p.y) < 1.5)?.z
+  return (
+    <div class="pointinfo small job" role="status">
+      <div class="spread">
+        <b>{j.kind === 'retake' ? `Retake: ${j.points.length} point${j.points.length > 1 ? 's' : ''}` : `Re-level${j.warm ? ' after warm-up' : ''}`}</b>
+        {jobBusy() ? (
+          <button class="btn sm danger" onClick={async () => (await ask({ title: 'Stop the job?', body: 'Stops the levelling job on the printer.', ok: 'Stop', danger: true })) && act('Stop', (b) => b.stop())}>Stop</button>
+        ) : (
+          <button class="btn sm" onClick={clearJob}>Close</button>
+        )}
+      </div>
+      <p style={j.phase === 'failed' ? 'color:var(--bad)' : ''}>{status}</p>
+      {results.map(({ point, spot }) => {
+        const z0 = runZ(point)
+        return (
+          <p>
+            <b>X {point.x.toFixed(0)} Y {point.y.toFixed(0)}:</b>{' '}
+            {spot
+              ? `retaken z ${spot.z.toFixed(3)} mm (${spot.samples.length} readings, spread ${spot.spread.toFixed(3)} mm)` + (z0 !== undefined ? `; the levelling run had ${z0.toFixed(3)}. ${judgeRetake(z0, spot)}` : '.')
+              : 'no new readings found in the log. The firmware may not accept PROBE_ACCURACY from a job file; the Console tab and the printer screen may say why.'}
+          </p>
+        )
+      })}
+      <Stills />
+    </div>
   )
 }

@@ -242,13 +242,18 @@ try {
         lines.push(`[probe][174][Debug][${(t += 900)}]:probe at ${x.toFixed(3)},${y.toFixed(3)} is z=${z.toFixed(6)}`)
         if (i === 0 && j === 0) lines.push(`[probe][310][Debug][${t}]:PrinterProbe samples exceed tolerance. Retrying... MAX:0.6 MIN:0.05 samples_tolerance:0.015000`)
       }
+    // The printer "started" 5000 s ago. Each log read ends with a 5-sample burst at
+    // 20,20 stamped with the current time, standing in for a retake job's readings.
+    const boot = Date.now() / 1000 - 5000
+    const up = () => Date.now() / 1000 - boot
+    const burst = () => [0.411, 0.41, 0.409, 0.41, 0.41].map((z, k) => `[probe][174][Debug][${Math.round(up() * 1000) + k * 900}]:probe at 20.000,20.000 is z=${z.toFixed(6)}`)
     const answers = {
-      clock: '5000.00 9000.00\n1795000000',
-      'probe-log': lines.join('\n'),
+      clock: () => `${up().toFixed(2)} 9000.00\n${Math.floor(Date.now() / 1000)}`,
+      'probe-log': () => [...lines, ...burst()].join('\n'),
       'mesh-files': '/board-resource/printer.cfg',
       'mesh-file': '[bed_mesh default]\npoints =\n  0.1, 0.0\n  -0.1, 0.05\n',
     }
-    window.__ccShellMock = { read: async ({ query }) => ({ text: answers[query] }) }
+    window.__ccShellMock = { read: async ({ query }) => ({ text: typeof answers[query] === 'function' ? answers[query]() : answers[query] }) }
   })
   await bed.goto('http://127.0.0.1:4173/')
   await bed.locator('nav button', { hasText: 'Care' }).click()
@@ -263,13 +268,37 @@ try {
   await bed.locator('.pointinfo', { hasText: 'retried 1×' }).waitFor()
   await bed.locator('.bedreport').screenshot({ path: `${out}/bed-report.png` })
   ok('bed levelling report: heat map, retried points, edge check and saved mesh')
+
+  // Wipe and retake one point: uploads a job file, starts it without auto-levelling,
+  // follows it to the end, reads the log again and judges the new readings.
+  await bed.getByText('Connected', { exact: true }).waitFor({ timeout: 10000 })
+  await bed.getByRole('button', { name: 'Wipe the nozzle and retake this point' }).click()
+  await bed.getByText(/Experimental: this has not been run/).waitFor()
+  await bed.getByRole('button', { name: 'Start the retake' }).click()
+  await bed.locator('.job', { hasText: 'Retake: 1 point' }).waitFor()
+  await bed.locator('.job', { hasText: /retaken z 0\.410 mm \(5 readings/ }).waitFor({ timeout: 90000 })
+  await bed.locator('.job', { hasText: 'probably dirt' }).waitFor()
+  const started = printerLog.split('\n').find((l) => l.includes('cmd 128') && l.includes('cc-retake.gcode'))
+  if (!started || !started.includes('"Calibration_switch":0')) throw new Error(`retake job not started as expected: ${started}`)
+  await bed.locator('.bedreport').screenshot({ path: `${out}/bed-retake.png` })
+  ok('wipe and retake a point: job uploaded and started without levelling, new readings judged')
+
+  await bed.getByRole('button', { name: 'Close' }).click()
+  await bed.locator('summary', { hasText: 'Re-level the bed' }).click()
+  await bed.getByRole('button', { name: 'Re-level now (cold)' }).click()
+  await bed.getByRole('button', { name: 'Start levelling' }).click()
+  await bed.locator('.job', { hasText: 'Re-level' }).waitFor()
+  await bed.waitForFunction(() => /Finished|Read again/.test(document.querySelector('.job')?.textContent ?? ''), null, { timeout: 90000 })
+  const lv = printerLog.split('\n').find((l) => l.includes('cmd 128') && l.includes('cc-level-only.gcode'))
+  if (!lv || !lv.includes('"Calibration_switch":1')) throw new Error(`level-only job not started with levelling: ${lv}`)
+  ok('re-level (cold): level-only job started with auto-levelling and followed to the end')
   await bed.close()
 
   const wide = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 })
   await wide.goto('http://127.0.0.1:4173/')
   await wide.getByPlaceholder('192.168.1.50').fill('127.0.0.1')
   await wide.getByRole('button', { name: 'Save and connect' }).click()
-  await wide.locator('.chip', { hasText: /Stopped|Idle/ }).waitFor()
+  await wide.locator('.chip', { hasText: /Stopped|Idle|complete/ }).waitFor()
   await wide.waitForFunction(() => document.querySelector('.cam img')?.naturalWidth > 0)
   await wide.screenshot({ path: `${out}/desktop.png` })
   ok('desktop layout')

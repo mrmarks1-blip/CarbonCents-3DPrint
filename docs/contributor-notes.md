@@ -140,6 +140,17 @@ How it works, and why:
   `Zoffset`, `ChamberFanStatus`, `FilamentDetect`, `PoweroffRecovery`, `Light`, `InputShaper`, `NozzlePid`,
   `BedLevel`, motor unlock and model download by URL. They show what the firmware can do internally.
 - Status-setter key names present in the binary but never sent by the stock page: `TempTargetBox`, `MainLight`. Untested.
+- **G-code the firmware knows (strings in `/app/app`, V1.4.49, 2026-11-27).** Klipper-derived: `G29` runs
+  `BED_MESH_CALIBRATE` (fast/normal; the log shows `cmd_G29` and profile `besh_profile_standard_default`),
+  `PROBE`, `PROBE_ACCURACY` (logs "PROBE_ACCURACY at X:%.3f Y:%.3f Z:%.3f (samples=%d ..."), `QUERY_PROBE`,
+  `PROBE_CALIBRATE`, `PROBE_BY_STEP`, `G30`, `G31`, `M729` / `WIPE_NOZZLE` (nozzle clean; the filament-load routine
+  calls `M729` between purges), `BED_MESH_CLEAR` / `_OUTPUT` / `_MAP` / `_OFFSET`. Whether a job *file* may use the
+  extended (non-G/M) commands is **not tested**.
+- **Bed report jobs (experimental, `src/features/levelling.ts`).** Re-level uploads an empty `cc-level-only.gcode` and
+  starts it with `Calibration_switch: 1` (only known commands). Retake uploads `cc-retake.gcode`: `G28`, `M109 S170`,
+  `M729`, `M104 S140`, then `PROBE_ACCURACY SAMPLES=5` at each point, read back from the `[probe] probe at` log lines.
+  Neither has run on a real printer yet. First real test: retake one point with the owner watching, then check the
+  log for the probe lines and for any "unknown command" message.
 
 ## 6. Known problems in the app
 
