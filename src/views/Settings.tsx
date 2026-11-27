@@ -80,6 +80,7 @@ export function Settings({ go }: { go: (tab: string) => void }) {
           <li>It accepts about five connections at once. This app uses one, plus one for the camera.</li>
           <li>On stock and OpenCentauri-patched firmware there is no network command for raw G-code, flow rate, emergency stop or camera exposure. Those appear here automatically on COSMOS.</li>
         </ul>
+        <p class="dim small num" style="margin:0">Centauri Control v{__APP_VERSION__} · build {__APP_BUILD__}</p>
       </section>
     </>
   )

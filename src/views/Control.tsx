@@ -98,20 +98,31 @@ export function Control() {
 }
 
 function Slider(p: { label: string; value: number; min: number; max: number; unit: string; disabled: boolean; onSet: (v: number) => void }) {
-  const [drag, setDrag] = useState<number | null>(null)
-  const v = drag ?? p.value
+  // Moving the slider only picks a value; nothing is sent until Set is tapped, so a
+  // stray touch while scrolling cannot change the printer.
+  const [pend, setPend] = useState<number | null>(null)
+  const [sent, setSent] = useState<number | null>(null)
+  const v = pend ?? sent ?? p.value
+  const changed = pend !== null && pend !== p.value
   return (
-    <label class="field">
-      <span class="spread"><span>{p.label}</span><b class="num" style="color:var(--text)">{Math.round(v)}{p.unit}</b></span>
+    <div class="field">
+      <span class="spread"><span>{p.label}</span><b class="num" style={`color:${changed ? 'var(--accent)' : 'var(--text)'}`}>{Math.round(v)}{p.unit}</b></span>
       <input
-        type="range" min={p.min} max={p.max} step={5} value={v} disabled={p.disabled}
-        onInput={(e) => setDrag(+e.currentTarget.value)}
-        onChange={(e) => {
-          p.onSet(+e.currentTarget.value)
-          setTimeout(() => setDrag(null), 2500) // hold the thumb until the printer reports back
-        }}
+        type="range" aria-label={p.label} min={p.min} max={p.max} step={5} value={v} disabled={p.disabled}
+        onInput={(e) => setPend(+e.currentTarget.value)}
       />
-    </label>
+      {changed && (
+        <div class="row tight">
+          <button class="btn sm primary grow" disabled={p.disabled} onClick={() => {
+            p.onSet(pend)
+            setSent(pend)
+            setPend(null)
+            setTimeout(() => setSent(null), 2500) // hold the thumb until the printer reports back
+          }}>Set {p.label.toLowerCase()} to {pend}{p.unit}</button>
+          <button class="btn sm" onClick={() => setPend(null)}>Cancel</button>
+        </div>
+      )}
+    </div>
   )
 }
 
