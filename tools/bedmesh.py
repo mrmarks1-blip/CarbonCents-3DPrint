@@ -236,17 +236,24 @@ def heatmap(points, title, note, span=None):
     xs = sorted({round(p["x"], 1) for p in points})
     ys = sorted({round(p["y"], 1) for p in points})
     span = span or max(0.05, max(abs(p["rel"]) for p in points))
-    cell, pad = 64, 58
-    w, h = pad + cell * len(xs) + 8, pad + cell * len(ys) + 8
+    cell, pad, top = 64, 74, 80
+    gw, gh = cell * len(xs), cell * len(ys)
+    w, h = pad + gw + 28, top + gh + 30
     out = [f'<svg viewBox="0 0 {w} {h}" role="img" aria-label="{html.escape(title)}">']
+    # Seen from the front of the printer: X grows to the right, Y grows towards the back
+    # (the toolhead parks at the back right, about X 202 / Y 264).
+    out.append(f'<text x="{pad + gw / 2}" y="16" class="side">BACK</text>')
+    out.append(f'<text x="{pad + gw / 2}" y="{top + gh + 24}" class="side">FRONT</text>')
+    out.append(f'<text x="14" y="{top + gh / 2}" class="side" transform="rotate(-90 14 {top + gh / 2})">LEFT</text>')
+    out.append(f'<text x="{w - 10}" y="{top + gh / 2}" class="side" transform="rotate(90 {w - 10} {top + gh / 2})">RIGHT</text>')
     for i, x in enumerate(xs):
-        out.append(f'<text x="{pad + cell * i + cell / 2}" y="{pad - 10}" class="ax">{x:g}</text>')
+        out.append(f'<text x="{pad + cell * i + cell / 2}" y="{top - 10}" class="ax">{x:g}</text>')
     for j, y in enumerate(reversed(ys)):  # y grows towards the back of the bed: draw it at the top
-        out.append(f'<text x="{pad - 6}" y="{pad + cell * j + cell / 2 + 4}" class="ax" text-anchor="end">{y:g}</text>')
+        out.append(f'<text x="{pad - 6}" y="{top + cell * j + cell / 2 + 4}" class="ax ay">{y:g}</text>')
     for p in points:
         i = xs.index(round(p["x"], 1))
         j = len(ys) - 1 - ys.index(round(p["y"], 1))
-        x0, y0 = pad + cell * i, pad + cell * j
+        x0, y0 = pad + cell * i, top + cell * j
         out.append(f'<rect x="{x0 + 2}" y="{y0 + 2}" width="{cell - 4}" height="{cell - 4}" rx="6" fill="{colour(p["rel"], span)}"'
                    + (' class="retry"' if p.get("retries") else "") + "/>")
         out.append(f'<text x="{x0 + cell / 2}" y="{y0 + cell / 2 + 4}" class="v">{p["rel"]:+.3f}</text>')
@@ -287,7 +294,7 @@ def report(runs, mesh_rows, mesh_file, boot_epoch, host):
 body{{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,sans-serif;padding:16px;max-width:900px;margin:auto}}
 h1{{font-size:1.3rem}} h2{{font-size:1rem;margin:0 0 4px}} section{{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin:14px 0}}
 .note{{color:var(--dim);font-size:.85rem;margin:0 0 8px}} .map{{overflow-x:auto}} svg{{width:100%;max-width:640px;height:auto}}
-.ax{{fill:var(--dim);font-size:11px;text-anchor:middle}} .v{{fill:#111;font-size:11px;text-anchor:middle;font-variant-numeric:tabular-nums}}
+.ax{{fill:var(--dim);font-size:11px;text-anchor:middle}} .ay{{text-anchor:end}} .side{{fill:var(--text);font-size:12px;font-weight:700;letter-spacing:.12em;text-anchor:middle}} .v{{fill:#111;font-size:11px;text-anchor:middle;font-variant-numeric:tabular-nums}}
 .retry{{stroke:#111;stroke-width:3}} .flag{{fill:#111;font-weight:800;font-size:14px}} li{{margin:6px 0}}
 </style></head><body>
 <h1>Bed mesh report</h1>

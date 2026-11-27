@@ -27,8 +27,7 @@ export function Dashboard({ go }: { go: (tab: string) => void }) {
 
       <section class="card hero wide">
         <div class="spread">
-          <span class={`chip ${s.phase}`}>{s.detail || 'Not connected'}</span>
-          <span class="dim small num">{s.raw}</span>
+          <span class={`chip ${s.phase}`} title={s.raw}>{s.detail || 'Not connected'}</span>
         </div>
         {active || s.phase === 'complete' ? (
           <>

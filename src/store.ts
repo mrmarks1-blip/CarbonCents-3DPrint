@@ -345,10 +345,18 @@ export async function syncHistoryHours() {
   const b = backend.value
   if (!b || conn.value !== 'connected') return
   try {
+    const first = Object.keys(ledger.value).length === 0
     const l = { ...ledger.value }
     let changed = false
     for (const h of await b.history()) changed = recordJob(l, h.id, h.seconds ?? h.end - h.begin) || changed
-    if (changed) ledger.value = l
+    if (!changed) return
+    ledger.value = l
+    // First sync on this device: tasks were created before the history arrived, counting
+    // from 0 h. Start them from the printer's real total so nothing is "overdue" on day one.
+    if (first) {
+      const hours = totalHours(l)
+      tasks.value = tasks.value.map((t) => (t.hoursAtLastDone === 0 ? { ...t, hoursAtLastDone: hours } : t))
+    }
   } catch {
     /* history is a bonus; the live counter still works */
   }

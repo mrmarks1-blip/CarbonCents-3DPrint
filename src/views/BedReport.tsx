@@ -15,18 +15,27 @@ function Heatmap({ points, span, label, pick, picked, flagOff = true }: { points
   const ys = axis(points, 'y')
   const sp = span ?? Math.max(0.05, ...points.map((p) => Math.abs(p.rel)))
   const cell = 60
-  const pad = 60
-  const w = pad + cell * xs.length + 6
-  const h = pad - 16 + cell * ys.length + 6
+  const pad = 76 // left margin: side label + Y values
+  const top = 64 // BACK label + X values
+  const gw = cell * xs.length
+  const gh = cell * ys.length
+  const w = pad + gw + 26
+  const h = top + gh + 28
+  // Seen from the front of the printer: X grows to the right, Y towards the back
+  // (the toolhead parks at the back right, about X 202 / Y 264).
   return (
     <svg class="mesh" viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label}>
-      {xs.map((x, i) => <text x={pad + cell * i + cell / 2} y={20} class="ax">{x}</text>)}
-      {[...ys].reverse().map((y, j) => <text x={pad - 6} y={pad - 16 + cell * j + cell / 2 + 4} class="ax" text-anchor="end">{y}</text>)}
+      <text x={pad + gw / 2} y={14} class="side">BACK</text>
+      <text x={pad + gw / 2} y={top + gh + 22} class="side">FRONT</text>
+      <text x={14} y={top + gh / 2} class="side" transform={`rotate(-90 14 ${top + gh / 2})`}>LEFT</text>
+      <text x={w - 10} y={top + gh / 2} class="side" transform={`rotate(90 ${w - 10} ${top + gh / 2})`}>RIGHT</text>
+      {xs.map((x, i) => <text x={pad + cell * i + cell / 2} y={top - 10} class="ax">{x}</text>)}
+      {[...ys].reverse().map((y, j) => <text x={pad - 6} y={top + cell * j + cell / 2 + 4} class="ax ay">{y}</text>)}
       {points.map((p, n) => {
         const i = xs.indexOf(+p.x.toFixed(1))
         const j = ys.length - 1 - ys.indexOf(+p.y.toFixed(1))
         const x0 = pad + cell * i
-        const y0 = pad - 16 + cell * j
+        const y0 = top + cell * j
         return (
           <g class={pick ? 'pickable' : ''} onClick={pick && (() => pick(n))} role={pick ? 'button' : undefined} aria-label={pick ? `Point ${p.x}, ${p.y}` : undefined}>
             <rect x={x0 + 2} y={y0 + 2} width={cell - 4} height={cell - 4} rx={6} fill={colour(p.rel, sp)} class={`${p.retries ? 'retry' : ''} ${flagOff && Math.abs(p.rel) > OFF_MM ? 'off' : ''} ${picked === n ? 'picked' : ''}`} />
@@ -141,7 +150,7 @@ export function BedReport() {
             </>
           )}
           {!rep.mesh && rep.meshFiles.length > 0 && <p class="dim small">Files mentioning a mesh: {rep.meshFiles.join(', ')} (grid not recognised).</p>}
-          <p class="dim small">Heights in mm relative to each run's average: red is higher (closer to the nozzle), blue lower. Solid outline with ! = the probe retried there; dashed outline = more than {OFF_MM} mm from the average. Front/back assumes Y 0 is the front of the bed.</p>
+          <p class="dim small">Heights in mm relative to each run's average: red is higher (closer to the nozzle), blue lower. Solid outline with ! = the probe retried there; dashed outline = more than {OFF_MM} mm from the average. Drawn as seen from the front of the printer (Y 0 is the front; the toolhead parks at the back right).</p>
         </>
       )}
     </section>
