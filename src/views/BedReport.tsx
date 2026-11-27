@@ -90,18 +90,18 @@ export function BedReport() {
     <section class="card bedreport">
       <div class="spread">
         <h2>Bed levelling report</h2>
-        <button class="btn sm" onClick={load} disabled={busy || !host || host === 'demo'}>{busy ? 'Reading…' : rep ? 'Read again' : 'Read from printer'}</button>
+        <button class="btn sm" onClick={load} disabled={busy || !host || host === 'demo' || printing}>{busy ? 'Reading…' : rep ? 'Read again' : 'Read from printer'}</button>
       </div>
       {!rep && !err && (
         <p class="dim small">
           Draws each recent auto-levelling run from the printer's log as a heat map, marks points where the probe had to retry, and compares the last two runs. Read-only:
-          it only reads files over the OpenCentauri shell (patched firmware){sdcp ? '' : ', and this does not look like that firmware'}. {printing ? 'Best done when the printer is idle.' : ''}
+          it only reads files over the OpenCentauri shell (patched firmware){sdcp ? '' : ', and this does not look like that firmware'}. {printing ? 'Available when the printer is not printing, so the read cannot disturb it.' : ''}
         </p>
       )}
       {err && <p class="small" style="color:var(--bad)">{err}</p>}
       {rep && (
         <>
-          <ul class="small tips">{advice(runs.slice(0, runs.length - shown)).map((t) => <li>{t}</li>)}</ul>
+          <ul class="small tips">{advice(runs.slice(0, runs.length - shown), shown === 0).map((t) => <li>{t}</li>)}</ul>
           {run ? (
             <>
               <div class="spread">
@@ -112,7 +112,7 @@ export function BedReport() {
                 </div>
               </div>
               <p class="dim small">
-                {when(run.t0, rep.bootEpoch)} · {run.points.length} points · range {run.range.toFixed(3)} mm · edges {(run.edgeMinusCentre >= 0 ? '+' : '') + run.edgeMinusCentre.toFixed(3)} mm vs centre · {run.retried.length} retried
+                {when(run.t0, rep.bootEpoch, run.thisBoot)} · {run.points.length} points · range {run.range.toFixed(3)} mm · edges {(run.edgeMinusCentre >= 0 ? '+' : '') + run.edgeMinusCentre.toFixed(3)} mm vs centre · {run.retried.length} retried
               </p>
               <Heatmap points={run.points} label="Probed heights" />
               {diff.length > 0 && (

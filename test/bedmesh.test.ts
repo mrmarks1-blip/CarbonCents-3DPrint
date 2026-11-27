@@ -62,4 +62,12 @@ describe('bed mesh report', () => {
     expect(parseMesh('{"bed_mesh":{"probed_matrix":[[1,2],[3,4]]}}')).toEqual([[1, 2], [3, 4]])
     expect(parseMesh('nothing here')).toBeNull()
   })
+  it('keeps runs from before a printer restart apart (times restart from 0)', () => {
+    const log = makeLog()
+    const later = log.split('\n').filter((l) => l.includes('[probe]') && /\]\[5\d{6}\]/.test(l))
+    const shifted = later.map((l) => l.replace(/\]\[(\d+)\]:/, (_, t) => `][${+t - 4_500_000}]:`)) // same run, logged after a restart
+    const runs = splitRuns(parseProbes(log + '\n' + shifted.join('\n')))
+    expect(runs).toHaveLength(3)
+    expect(runs.map((r) => r.thisBoot)).toEqual([false, false, true])
+  })
 })

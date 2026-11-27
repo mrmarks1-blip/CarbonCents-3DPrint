@@ -30,7 +30,7 @@ public final class OcShell {
 
     /** The fixed command for a query, or null when the query is not allowed. */
     public static String command(String query, String path, int logMb) {
-        int bytes = Math.max(1, Math.min(logMb, 8)) * 1_000_000;
+        int bytes = Math.max(1, Math.min(logMb, 4)) * 1_000_000; // the printer has only a few MB free
         switch (query) {
             case "clock":
                 return "cat /proc/uptime; date +%s";
@@ -38,7 +38,7 @@ public final class OcShell {
                 return "tail -c " + bytes + " /board-resource/log1 2>/dev/null | grep -E '\\[probe\\]|exceed tolerance'; "
                     + "tail -c " + bytes + " /board-resource/log2 2>/dev/null | grep -E '\\[probe\\]|exceed tolerance'";
             case "mesh-files":
-                return "for f in $(find /board-resource /app /etc -maxdepth 3 -type f -size -300k "
+                return "for f in $(find /board-resource /app /etc -maxdepth 3 -type f -size -100k "
                     + "\\( -name '*.cfg' -o -name '*.conf' -o -name '*.json' -o -name '*.ini' \\) 2>/dev/null); "
                     + "do grep -qi 'mesh' \"$f\" 2>/dev/null && echo \"$f\"; done";
             case "mesh-file":
@@ -77,13 +77,27 @@ public final class OcShell {
             ByteArrayOutputStream buf = new ByteArrayOutputStream();
             byte[] chunk = new byte[65536];
             byte[] endBytes = end.getBytes(StandardCharsets.UTF_8);
+            byte[] tail = new byte[0]; // last bytes seen, so a marker split across reads is still found
             long deadline = System.currentTimeMillis() + timeoutMs;
+            boolean complete = false;
             try {
-                while (buf.size() < MAX_BYTES && System.currentTimeMillis() < deadline) {
+                while (buf.size() < MAX_BYTES) {
+                    long left = deadline - System.currentTimeMillis();
+                    if (left <= 0) break;
+                    s.setSoTimeout((int) Math.max(1, left)); // the whole read, not each chunk, is bounded
                     int n = in.read(chunk);
                     if (n < 0) break;
                     buf.write(chunk, 0, n);
-                    if (contains(buf.toByteArray(), endBytes, Math.max(0, buf.size() - n - endBytes.length))) break;
+                    byte[] window = new byte[tail.length + n];
+                    System.arraycopy(tail, 0, window, 0, tail.length);
+                    System.arraycopy(chunk, 0, window, tail.length, n);
+                    if (contains(window, endBytes, 0)) {
+                        complete = true;
+                        break;
+                    }
+                    int keep = Math.min(window.length, endBytes.length);
+                    tail = new byte[keep];
+                    System.arraycopy(window, window.length - keep, tail, 0, keep);
                 }
             } catch (SocketTimeoutException e) {
                 // fall through with what arrived
@@ -98,8 +112,16 @@ public final class OcShell {
             if (a < 0) throw new Exception("The printer's shell did not answer as expected. Is this OpenCentauri-patched firmware?");
             text = text.substring(a + start.length());
             int b = text.indexOf(end);
-            if (b < 0) throw new Exception("The printer's shell stopped answering before the end of the reply.");
-            return text.substring(0, b).replaceFirst("^[\\r\\n]+", "");
+            if (b >= 0) return text.substring(0, b).replaceFirst("^[\\r\\n]+", "");
+            if (buf.size() >= MAX_BYTES) {
+                // Too much to carry: keep what arrived, minus a possibly cut last line. The newest lines are
+                // at the end of each log, so the caller should read less (logMb) for the very latest.
+                int nl = text.lastIndexOf('\n');
+                return (nl > 0 ? text.substring(0, nl) : text).replaceFirst("^[\\r\\n]+", "");
+            }
+            if (!complete)
+                throw new Exception("The printer's shell did not finish in time. It may still be busy with the last request: wait a minute and try again.");
+            throw new Exception("The printer's shell stopped answering before the end of the reply.");
         }
     }
 

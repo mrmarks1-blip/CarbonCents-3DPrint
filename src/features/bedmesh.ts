@@ -16,6 +16,8 @@ export interface ProbePoint {
   spread: number
 }
 export interface Run {
+  /** False for runs logged before the printer last restarted (their clock time is unknown). */
+  thisBoot: boolean
   t0: number // ms since boot
   t1: number
   points: ProbePoint[]
@@ -61,24 +63,30 @@ export function parseProbes(text: string): Ev[] {
       out.push({ kind: 'r', t: +m[1], max: +m[2], min: +m[3] })
     }
   }
-  return out.sort((a, b) => a.t - b.t) // stable: a retry stays after the probe it follows
+  // Kept in log order, not sorted: times are milliseconds since the printer
+  // started, so they jump back at every restart. splitRuns uses that jump to
+  // tell boots apart instead of merging runs from different days.
+  return out
 }
 
 export function splitRuns(events: Ev[]): Run[] {
-  const groups: Ev[][] = []
+  const groups: { boot: number; ev: Ev[] }[] = []
   let cur: Ev[] = []
   let last: number | null = null
+  let boot = 0
   for (const e of events) {
-    if (last !== null && (e.t - last > RUN_GAP_MS || e.t < last)) {
-      groups.push(cur)
+    const restarted = last !== null && e.t < last - 1000
+    if (last !== null && (e.t - last > RUN_GAP_MS || restarted)) {
+      groups.push({ boot, ev: cur })
       cur = []
     }
+    if (restarted) boot++
     cur.push(e)
     last = e.t
   }
-  if (cur.length) groups.push(cur)
+  if (cur.length) groups.push({ boot, ev: cur })
   const runs: Run[] = []
-  for (const g of groups) {
+  for (const { boot: b, ev: g } of groups) {
     const pts = new Map<string, { x: number; y: number; samples: number[]; retries: number; spread: number }>()
     let lastKey: string | null = null
     for (const e of g) {
@@ -95,7 +103,7 @@ export function splitRuns(events: Ev[]): Run[] {
     }
     if (pts.size < MIN_POINTS) continue // a Z home or single probe, not a levelling run
     const points: ProbePoint[] = [...pts.values()].map((p) => ({ x: p.x, y: p.y, z: median(p.samples.slice(-3)), rel: 0, retries: p.retries, spread: p.spread }))
-    runs.push(analyse({ t0: g[0].t, t1: g[g.length - 1].t, points, range: 0, edgeMinusCentre: 0, retried: [], worstSpread: 0 }))
+    runs.push(analyse({ thisBoot: b === boot, t0: g[0].t, t1: g[g.length - 1].t, points, range: 0, edgeMinusCentre: 0, retried: [], worstSpread: 0 }))
   }
   return runs
 }
@@ -146,13 +154,13 @@ export function parseMesh(text: string): number[][] | null {
   }
 }
 
-export function advice(runs: Run[]): string[] {
+export function advice(runs: Run[], latest = true): string[] {
   if (!runs.length) return ['No levelling runs were found in the log. Run auto-levelling once (touchscreen, or start a print with it on), then read the report again.']
   const tips: string[] = []
   const last = runs[runs.length - 1]
   if (last.retried.length)
     tips.push(
-      `${last.retried.length} of ${last.points.length} points needed retries in the latest run (worst disagreement ${last.worstSpread.toFixed(3)} mm). ` +
+      `${last.retried.length} of ${last.points.length} points needed retries in ${latest ? 'the latest' : 'this'} run (worst disagreement ${last.worstSpread.toFixed(3)} mm). ` +
         'The probe is the nozzle pressing on the plate, so this usually means something between them: filament on the nozzle tip (brush it clean while hot), debris, or a plate not sitting flat on the magnet.',
     )
   if (Math.abs(last.edgeMinusCentre) > 0.08)
@@ -165,7 +173,7 @@ export function advice(runs: Run[]): string[] {
     if (d.length) {
       const worst = Math.max(...d.map((p) => Math.abs(p.rel)))
       tips.push(
-        `The two latest runs differ by up to ${worst.toFixed(3)} mm at the same point. ` +
+        `${latest ? 'The two latest runs' : 'This run and the one before'} differ by up to ${worst.toFixed(3)} mm at the same point. ` +
           (worst > 0.05
             ? 'That is more than the first layer can absorb (about 0.05 mm): the mesh is not repeatable, so something changes between runs (temperature, nozzle tip, plate seating).'
             : 'That is small: the mesh is repeatable.'),
@@ -204,7 +212,6 @@ export async function readReport(host: string, logMb = 4): Promise<Report> {
   }
   const up = clock.trim().split(/\s+/)
   const bootEpoch = up.length >= 2 ? +up[up.length - 1] - +up[0] : null
-  const runs = splitRuns(parseProbes(await read(host, 'probe-log', undefined, logMb)))
   const meshFiles = (await read(host, 'mesh-files')).split(/\s+/).filter(Boolean).slice(0, 6)
   let mesh: Report['mesh'] = null
   for (const f of meshFiles) {
@@ -218,10 +225,13 @@ export async function readReport(host: string, logMb = 4): Promise<Report> {
       /* not allowed or unreadable: try the next */
     }
   }
+  // Last: the biggest read. If it is slow, the small ones above are already done.
+  const runs = splitRuns(parseProbes(await read(host, 'probe-log', undefined, logMb)))
   return { runs, bootEpoch: Number.isFinite(bootEpoch) ? bootEpoch : null, mesh, meshFiles }
 }
 
-export function when(ms: number, bootEpoch: number | null) {
+export function when(ms: number, bootEpoch: number | null, thisBoot = true) {
+  if (!thisBoot) return 'before the printer last restarted'
   if (bootEpoch === null) return `${(ms / 3_600_000).toFixed(1)} h after the printer started`
   return new Date((bootEpoch + ms / 1000) * 1000).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }

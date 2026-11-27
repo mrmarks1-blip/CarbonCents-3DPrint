@@ -26,7 +26,7 @@ public class PrinterShellPlugin extends Plugin {
                 JSObject ret = new JSObject();
                 ret.put("text", OcShell.run(host, query, path, logMb, 60000));
                 call.resolve(ret);
-            } catch (Exception e) {
+            } catch (Throwable e) { // anything, so the page never waits forever
                 call.reject(e.getMessage() == null ? e.toString() : e.getMessage());
             }
         }).start();

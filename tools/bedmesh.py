@@ -30,7 +30,7 @@ PROBE = re.compile(r"\[probe\]\[\d+\]\[\w+\]\[(\d+)\]:probe at (-?[\d.]+),\s*(-?
 RETRY = re.compile(r"\[probe\]\[\d+\]\[\w+\]\[(\d+)\]:.*exceed tolerance.*MAX:\s*(-?[\d.]+)\s+MIN:\s*(-?[\d.]+)(?:.*tolerance:\s*(-?[\d.]+))?")
 RUN_GAP_MS = 120_000  # probes further apart than this belong to different runs
 MIN_POINTS = 9  # fewer distinct points: a Z home / single probe, not a levelling run
-LOG_FILES = ["/board-resource/log1", "/board-resource/log2"]
+LOG_FILES = ["/board-resource/log1", "/board-resource/log2"]  # log1 is the older, full one
 
 
 # ---------------------------------------------------------------- reading
@@ -46,13 +46,13 @@ def read_printer(host, log_mb):
     out = {}
     up = shell(host, "cat /proc/uptime; date +%s").split()
     out["boot_epoch"] = float(up[-1]) - float(up[0]) if len(up) >= 2 else None
-    n = int(log_mb * 1_000_000)
+    n = int(min(log_mb, 4) * 1_000_000)  # the printer has only a few MB free
     # Only the probe lines come back over the wire; the filtering happens on the printer.
     out["log"] = shell(host, "; ".join(f"tail -c {n} {f} 2>/dev/null | grep -E '\\[probe\\]|exceed tolerance'" for f in LOG_FILES), timeout=90)
     # Small config-like files that mention a mesh. Bounded: no recursion into /user-resource.
     found = shell(
         host,
-        "for f in $(find /board-resource /app /etc -maxdepth 3 -type f -size -300k \\( -name '*.cfg' -o -name '*.conf' -o -name '*.json' -o -name '*.ini' \\) 2>/dev/null); "
+        "for f in $(find /board-resource /app /etc -maxdepth 3 -type f -size -100k \\( -name '*.cfg' -o -name '*.conf' -o -name '*.json' -o -name '*.ini' \\) 2>/dev/null); "
         "do grep -qi 'mesh' \"$f\" 2>/dev/null && echo \"$f\"; done",
     ).split()
     out["mesh_files"] = {}
@@ -75,7 +75,8 @@ def parse_probes(text):
         m = RETRY.search(line)
         if m:
             events.append(("r", int(m[1]), float(m[2]), float(m[3]), float(m[4]) if m[4] else None))
-    events.sort(key=lambda e: e[1])
+    # Kept in log order, not sorted: times are ms since the printer started and
+    # jump back at every restart; split_runs uses that to keep boots apart.
     # The two log files overlap when the tail of log1 and log2 both hold a line.
     dedup, seen = [], set()
     for e in events:
@@ -86,17 +87,20 @@ def parse_probes(text):
 
 
 def split_runs(events):
-    runs, cur, last_t = [], [], None
+    runs, cur, last_t, boot = [], [], None, 0
     for e in events:
-        if last_t is not None and (e[1] - last_t > RUN_GAP_MS or e[1] < last_t):
-            runs.append(cur)
+        restarted = last_t is not None and e[1] < last_t - 1000
+        if last_t is not None and (e[1] - last_t > RUN_GAP_MS or restarted):
+            runs.append((boot, cur))
             cur = []
+        if restarted:
+            boot += 1
         cur.append(e)
         last_t = e[1]
     if cur:
-        runs.append(cur)
+        runs.append((boot, cur))
     out = []
-    for r in runs:
+    for b, r in runs:
         pts = OrderedDict()
         last_key = None
         for e in r:
@@ -113,7 +117,7 @@ def split_runs(events):
             continue
         for p in pts.values():
             p["z"] = statistics.median(p["samples"][-3:])  # the samples the firmware settled on
-        out.append({"t0": r[0][1], "t1": r[-1][1], "points": list(pts.values())})
+        out.append({"t0": r[0][1], "t1": r[-1][1], "points": list(pts.values()), "this_boot": b == boot})
     return out
 
 
@@ -252,7 +256,9 @@ def heatmap(points, title, note, span=None):
     return f'<section><h2>{html.escape(title)}</h2><p class="note">{html.escape(note)}</p><div class="map">{"".join(out)}</div></section>'
 
 
-def when(ms, boot_epoch):
+def when(ms, boot_epoch, this_boot=True):
+    if not this_boot:
+        return "before the printer last restarted"
     if boot_epoch is None:
         return f"{ms / 1000 / 3600:.1f} h after boot"
     return time.strftime("%a %d %b %H:%M", time.localtime(boot_epoch + ms / 1000))
@@ -262,7 +268,7 @@ def report(runs, mesh_rows, mesh_file, boot_epoch, host):
     parts = []
     for n, r in enumerate(reversed(runs[-6:])):
         label = "Latest levelling run" if n == 0 else f"Earlier run ({n} before the latest)"
-        note = (f"{when(r['t0'], boot_epoch)} · {len(r['points'])} points · range {r['range']:.3f} mm · edges {r['edge_minus_centre']:+.3f} mm vs centre · "
+        note = (f"{when(r['t0'], boot_epoch, r['this_boot'])} · {len(r['points'])} points · range {r['range']:.3f} mm · edges {r['edge_minus_centre']:+.3f} mm vs centre · "
                 f"{len(r['retried'])} point(s) retried" + (f", worst disagreement {r['worst_spread']:.3f} mm" if r["retried"] else ""))
         parts.append(heatmap(r["points"], label, note))
         if n == 0 and len(runs) >= 2:
@@ -295,7 +301,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--host", default="192.168.1.50")
     ap.add_argument("--out", default="bedmesh.html")
-    ap.add_argument("--log-mb", type=float, default=4, help="how much of the end of each log file to read (default 4 MB)")
+    ap.add_argument("--log-mb", type=float, default=4, help="how much of the end of each log file to read (default 4 MB, at most 4)")
     ap.add_argument("--log", help="offline: a local copy of the log instead of the printer")
     ap.add_argument("--mesh", help="offline: a local config file holding the mesh")
     a = ap.parse_args()
@@ -323,7 +329,7 @@ def main():
 
     print(f"{len(runs)} levelling run(s) found in the log.")
     for r in runs[-3:]:
-        print(f"  {when(r['t0'], data['boot_epoch'])}: {len(r['points'])} points, range {r['range']:.3f} mm, edges {r['edge_minus_centre']:+.3f} mm vs centre, {len(r['retried'])} retried")
+        print(f"  {when(r['t0'], data['boot_epoch'], r['this_boot'])}: {len(r['points'])} points, range {r['range']:.3f} mm, edges {r['edge_minus_centre']:+.3f} mm vs centre, {len(r['retried'])} retried")
     if data["mesh_files"]:
         print("Config files mentioning a mesh: " + ", ".join(data["mesh_files"]) + ("" if mesh_rows else " (no mesh grid recognised; send me one and I will add its format)"))
     elif not a.log:
