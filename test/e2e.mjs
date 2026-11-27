@@ -238,7 +238,7 @@ try {
     let t = 4_000_000
     for (const [j, y] of [20, 65.2, 110.4, 155.6, 200.8].entries())
       for (const [i, x] of [20, 65, 110, 155, 200].entries()) {
-        const z = 0.2 - (i === 0 || i === 4 || j === 0 || j === 4 ? 0.12 : 0)
+        const z = 0.4 - (i === 0 || i === 4 || j === 0 || j === 4 ? 0.3 : 0)
         lines.push(`[probe][174][Debug][${(t += 900)}]:probe at ${x.toFixed(3)},${y.toFixed(3)} is z=${z.toFixed(6)}`)
         if (i === 0 && j === 0) lines.push(`[probe][310][Debug][${t}]:PrinterProbe samples exceed tolerance. Retrying... MAX:0.6 MIN:0.05 samples_tolerance:0.015000`)
       }
@@ -255,8 +255,12 @@ try {
   await bed.getByRole('button', { name: 'Read from printer' }).click()
   await bed.locator('svg.mesh').first().waitFor()
   await bed.getByText(/1 of 25 points needed retries/).waitFor()
-  await bed.getByText(/edges are 0\.12 mm lower/).waitFor()
+  await bed.getByText(/edges are 0\.30 mm lower/).waitFor()
   await bed.getByText('Saved mesh').waitFor()
+  await bed.locator('.areas', { hasText: 'Low: all edges' }).waitFor()
+  await bed.locator('.areas', { hasText: 'High: centre' }).waitFor()
+  await bed.getByRole('button', { name: 'Point 20, 20', exact: true }).click()
+  await bed.locator('.pointinfo', { hasText: 'retried 1×' }).waitFor()
   await bed.locator('.bedreport').screenshot({ path: `${out}/bed-report.png` })
   ok('bed levelling report: heat map, retried points, edge check and saved mesh')
   await bed.close()

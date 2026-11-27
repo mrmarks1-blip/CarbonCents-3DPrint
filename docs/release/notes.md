@@ -1,6 +1,17 @@
 A phone-first control app for the Elegoo Centauri Carbon. It talks to the printer directly on your
 local network: no cloud account, no relay server, no telemetry.
 
+## New in v0.2.3
+
+- **Bed levelling report in the app** (Care tab, Android app, OpenCentauri-patched firmware): each
+  recent levelling run as a heat map, with the problem areas named ("Low: all edges", "Probe
+  retried: front-left"), squares more than 0.1 mm off outlined, and points where the probe had to
+  retry marked. Tap a square for its readings and what they suggest. Compares the last two runs and
+  shows the saved mesh. Read-only: the app can only run a fixed set of read commands on the printer,
+  and not during a print.
+- Runs logged before the printer last restarted are kept apart instead of being merged (also fixed
+  in `tools/bedmesh.py`).
+
 ## New in v0.2.2
 
 - **Warm up, then level and print** (Print dialog): heats only the bed, waits until it is at

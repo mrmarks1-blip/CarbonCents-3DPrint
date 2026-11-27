@@ -239,3 +239,9 @@ svg.mesh .v { fill: #111; font-size: 11px; text-anchor: middle; font-variant-num
 svg.mesh .retry { stroke: #111; stroke-width: 3; }
 svg.mesh .flag { fill: #111; font-weight: 800; font-size: 14px; }
 .bedreport .tips { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+svg.mesh .off { stroke: #111; stroke-width: 2.5; stroke-dasharray: 5 4; }
+svg.mesh .retry.off { stroke-dasharray: none; }
+svg.mesh .picked { stroke: var(--accent); stroke-width: 4; stroke-dasharray: none; }
+svg.mesh .pickable { cursor: pointer; }
+.pointinfo { background: var(--panel2); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; }
+.bedreport .areas { margin: 0; padding-left: 18px; display: grid; gap: 2px; }

@@ -8,7 +8,7 @@ on:
   release:
     types: [published]
 
-# write is needed only to publish a release when a v* tag is pushed
+# write is needed only to publish releases (and create their tags)
 permissions:
   contents: write
 
@@ -64,11 +64,29 @@ jobs:
           name: centauri-control-web
           path: dist
 
-      # Pushing a tag like v0.2.0 publishes a GitHub release with ready-to-use downloads.
-      - name: Package release files
-        if: startsWith(github.ref, 'refs/tags/v')
+      # Releases. Any of these publishes one with ready-to-use downloads:
+      # - a push to main whose package.json version has no release yet (the tag
+      #   vX.Y.Z is created here, so nobody has to push tags),
+      # - pushing a tag like v0.2.0,
+      # - publishing a release on the GitHub website.
+      - name: Decide whether to release
+        id: rel
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          V="${GITHUB_REF_NAME}"
+          V=""
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            V="$GITHUB_REF_NAME"
+          elif [[ "$GITHUB_REF" == refs/heads/main && "$GITHUB_EVENT_NAME" == push ]]; then
+            CANDIDATE="v$(node -p "require('./package.json').version")"
+            if ! gh release view "$CANDIDATE" >/dev/null 2>&1; then V="$CANDIDATE"; fi
+          fi
+          echo "v=$V" >> "$GITHUB_OUTPUT"
+          echo "Release: ${V:-none}"
+      - name: Package release files
+        if: steps.rel.outputs.v != ''
+        run: |
+          V="${{ steps.rel.outputs.v }}"
           mkdir -p release pkg/printer pkg/web
           cp android/app/build/outputs/apk/debug/app-debug.apk "release/CentauriControl-${V}.apk"
           cp -r dist pkg/printer/www
@@ -80,14 +98,15 @@ jobs:
           (cd pkg/web && zip -qr "../../release/CentauriControl-${V}-web.zip" .)
           ls -la release
       - name: Publish release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: steps.rel.outputs.v != ''
         env:
           GH_TOKEN: ${{ github.token }}
-        # Create the release, or fill in one that was already made on the website.
+          V: ${{ steps.rel.outputs.v }}
+        # Create the release (and its tag, at this commit), or fill in one made on the website.
         run: |
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" release/* --clobber
-            gh release edit "$GITHUB_REF_NAME" --title "Centauri Control $GITHUB_REF_NAME" --notes-file docs/release/notes.md
+          if gh release view "$V" >/dev/null 2>&1; then
+            gh release upload "$V" release/* --clobber
+            gh release edit "$V" --title "Centauri Control $V" --notes-file docs/release/notes.md
           else
-            gh release create "$GITHUB_REF_NAME" release/* --title "Centauri Control $GITHUB_REF_NAME" --notes-file docs/release/notes.md
+            gh release create "$V" release/* --target "$GITHUB_SHA" --title "Centauri Control $V" --notes-file docs/release/notes.md
           fi

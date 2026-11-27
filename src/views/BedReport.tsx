@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks'
-import { advice, axis, canRead, diffRuns, readReport, when, type ProbePoint, type Report } from '../features/bedmesh'
+import { OFF_MM, advice, axis, canRead, diffRuns, explainPoint, problemAreas, readReport, when, type ProbePoint, type Report } from '../features/bedmesh'
 import { activeHost, info, log, state } from '../store'
 
 /** Blue for low, red for high, near-white around 0. */
@@ -9,7 +9,7 @@ function colour(v: number, span: number) {
 }
 
 /** Heights on a grid, back of the bed at the top. */
-function Heatmap({ points, span, label }: { points: { x: number; y: number; rel: number; retries?: number }[]; span?: number; label: string }) {
+function Heatmap({ points, span, label, pick, picked, flagOff = true }: { points: { x: number; y: number; rel: number; retries?: number }[]; span?: number; label: string; pick?: (i: number) => void; picked?: number; flagOff?: boolean }) {
   if (!points.length) return null
   const xs = axis(points, 'x')
   const ys = axis(points, 'y')
@@ -22,14 +22,14 @@ function Heatmap({ points, span, label }: { points: { x: number; y: number; rel:
     <svg class="mesh" viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label}>
       {xs.map((x, i) => <text x={pad + cell * i + cell / 2} y={20} class="ax">{x}</text>)}
       {[...ys].reverse().map((y, j) => <text x={pad - 6} y={pad - 16 + cell * j + cell / 2 + 4} class="ax" text-anchor="end">{y}</text>)}
-      {points.map((p) => {
+      {points.map((p, n) => {
         const i = xs.indexOf(+p.x.toFixed(1))
         const j = ys.length - 1 - ys.indexOf(+p.y.toFixed(1))
         const x0 = pad + cell * i
         const y0 = pad - 16 + cell * j
         return (
-          <g>
-            <rect x={x0 + 2} y={y0 + 2} width={cell - 4} height={cell - 4} rx={6} fill={colour(p.rel, sp)} class={p.retries ? 'retry' : ''} />
+          <g class={pick ? 'pickable' : ''} onClick={pick && (() => pick(n))} role={pick ? 'button' : undefined} aria-label={pick ? `Point ${p.x}, ${p.y}` : undefined}>
+            <rect x={x0 + 2} y={y0 + 2} width={cell - 4} height={cell - 4} rx={6} fill={colour(p.rel, sp)} class={`${p.retries ? 'retry' : ''} ${flagOff && Math.abs(p.rel) > OFF_MM ? 'off' : ''} ${picked === n ? 'picked' : ''}`} />
             <text x={x0 + cell / 2} y={y0 + cell / 2 + 4} class="v">{(p.rel >= 0 ? '+' : '') + p.rel.toFixed(3)}</text>
             {!!p.retries && <text x={x0 + cell - 11} y={y0 + 16} class="flag">!</text>}
           </g>
@@ -45,6 +45,7 @@ export function BedReport() {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [shown, setShown] = useState(0) // which run, counting back from the latest
+  const [picked, setPicked] = useState<number | null>(null)
   const host = activeHost.value
   const sdcp = info.value?.backend === 'sdcp'
   const printing = ['preparing', 'printing', 'pausing', 'paused', 'resuming', 'stopping'].includes(state.value.phase)
@@ -57,6 +58,7 @@ export function BedReport() {
       const r = await readReport(host)
       setRep(r)
       setShown(0)
+      setPicked(null)
       log('ok', `Bed report: ${r.runs.length} levelling run(s) found.`)
     } catch (e) {
       setErr((e as Error).message)
@@ -107,19 +109,26 @@ export function BedReport() {
               <div class="spread">
                 <b class="small">{shown === 0 ? 'Latest run' : `${shown} run${shown > 1 ? 's' : ''} before the latest`}</b>
                 <div class="row tight">
-                  <button class="btn sm" disabled={shown >= runs.length - 1} onClick={() => setShown(shown + 1)} aria-label="Older run">‹</button>
-                  <button class="btn sm" disabled={shown === 0} onClick={() => setShown(shown - 1)} aria-label="Newer run">›</button>
+                  <button class="btn sm" disabled={shown >= runs.length - 1} onClick={() => (setShown(shown + 1), setPicked(null))} aria-label="Older run">‹</button>
+                  <button class="btn sm" disabled={shown === 0} onClick={() => (setShown(shown - 1), setPicked(null))} aria-label="Newer run">›</button>
                 </div>
               </div>
               <p class="dim small">
                 {when(run.t0, rep.bootEpoch, run.thisBoot)} · {run.points.length} points · range {run.range.toFixed(3)} mm · edges {(run.edgeMinusCentre >= 0 ? '+' : '') + run.edgeMinusCentre.toFixed(3)} mm vs centre · {run.retried.length} retried
               </p>
-              <Heatmap points={run.points} label="Probed heights" />
+              <Areas run={run.points} />
+              <Heatmap points={run.points} label="Probed heights" pick={(n) => setPicked(picked === n ? null : n)} picked={picked ?? undefined} />
+              {picked !== null && run.points[picked] && (
+                <div class="pointinfo small" role="status">
+                  {explainPoint(run.points[picked], axis(run.points, 'x'), axis(run.points, 'y')).map((l) => <p>{l}</p>)}
+                </div>
+              )}
+              {picked === null && <p class="dim small">Tap a square for its readings.</p>}
               {diff.length > 0 && (
                 <>
                   <b class="small">Change since the run before</b>
                   <p class="dim small">Near 0 everywhere means the mesh is repeatable. Level once cold and once after a warm-up, then compare here.</p>
-                  <Heatmap points={diff} span={0.1} label="Change since the previous run" />
+                  <Heatmap points={diff} span={0.1} label="Change since the previous run" flagOff={false} />
                 </>
               )}
             </>
@@ -128,13 +137,27 @@ export function BedReport() {
             <>
               <b class="small">Saved mesh</b>
               <p class="dim small">From {rep.mesh.file}; grid positions, not mm.</p>
-              <Heatmap points={meshPts} label="Saved mesh" />
+              <Heatmap points={meshPts} label="Saved mesh" flagOff={false} />
             </>
           )}
           {!rep.mesh && rep.meshFiles.length > 0 && <p class="dim small">Files mentioning a mesh: {rep.meshFiles.join(', ')} (grid not recognised).</p>}
-          <p class="dim small">Heights in mm relative to each run's average: red is higher (closer to the nozzle), blue lower. Outlined cells with ! needed probe retries.</p>
+          <p class="dim small">Heights in mm relative to each run's average: red is higher (closer to the nozzle), blue lower. Solid outline with ! = the probe retried there; dashed outline = more than {OFF_MM} mm from the average. Front/back assumes Y 0 is the front of the bed.</p>
         </>
       )}
     </section>
+  )
+}
+
+/** The problem areas of a run, in words. */
+function Areas({ run }: { run: ProbePoint[] }) {
+  const a = problemAreas(run)
+  const list = (v: string[]) => v.join(', ')
+  if (!a.low.length && !a.high.length && !a.retried.length) return <p class="small" style="color:var(--ok)">No problem areas: every point is within {OFF_MM} mm of the average and probed cleanly.</p>
+  return (
+    <ul class="small areas">
+      {a.low.length > 0 && <li><b>Low:</b> {list(a.low)}</li>}
+      {a.high.length > 0 && <li><b>High:</b> {list(a.high)}</li>}
+      {a.retried.length > 0 && <li><b>Probe retried:</b> {list(a.retried)}</li>}
+    </ul>
   )
 }

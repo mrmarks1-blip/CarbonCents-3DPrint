@@ -235,3 +235,60 @@ export function when(ms: number, bootEpoch: number | null, thisBoot = true) {
   if (bootEpoch === null) return `${(ms / 3_600_000).toFixed(1)} h after the printer started`
   return new Date((bootEpoch + ms / 1000) * 1000).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
+
+// ---- Naming problem areas ----------------------------------------------------
+
+/** Points further than this from the run's average are flagged on the map. */
+export const OFF_MM = 0.1
+
+/**
+ * Where a point sits, in words. Left/right follow X (X 0 on the left). Front/back
+ * assume Y 0 is the front of the bed, as on most printers.
+ */
+export function zoneOf(p: { x: number; y: number }, xs: number[], ys: number[]) {
+  const third = (v: number, a: number[]) => {
+    const i = a.indexOf(+v.toFixed(1))
+    const f = a.length > 1 ? i / (a.length - 1) : 0.5
+    return f < 0.2 ? 0 : f > 0.8 ? 2 : 1 // only the outermost points count as an edge
+  }
+  const col = ['left', '', 'right'][third(p.x, xs)]
+  const row = ['front', '', 'back'][third(p.y, ys)]
+  return row && col ? `${row}-${col}` : row || col || 'centre'
+}
+
+export interface Areas {
+  low: string[]
+  high: string[]
+  retried: string[]
+}
+/** Areas with points off by more than OFF_MM, and areas where the probe retried. */
+export function problemAreas(points: ProbePoint[]): Areas {
+  const xs = axis(points, 'x')
+  const ys = axis(points, 'y')
+  const uniq = (ps: ProbePoint[]) => [...new Set(ps.map((p) => zoneOf(p, xs, ys)))]
+  const EDGES = ['front-left', 'front', 'front-right', 'left', 'right', 'back-left', 'back', 'back-right']
+  const tidy = (zones: string[]) => (EDGES.every((z) => zones.includes(z)) ? ['all edges', ...zones.filter((z) => !EDGES.includes(z))] : zones)
+  return {
+    low: tidy(uniq(points.filter((p) => p.rel < -OFF_MM))),
+    high: tidy(uniq(points.filter((p) => p.rel > OFF_MM))),
+    retried: uniq(points.filter((p) => p.retries > 0)),
+  }
+}
+
+/** What one point's readings mean, for the tap-for-details panel. */
+export function explainPoint(p: ProbePoint, xs: number[], ys: number[]) {
+  const where = zoneOf(p, xs, ys)
+  const lines = [`X ${p.x.toFixed(0)}, Y ${p.y.toFixed(1)} (${where}): ${Math.abs(p.rel).toFixed(3)} mm ${p.rel >= 0 ? 'above' : 'below'} this run's average.`]
+  if (Math.abs(p.rel) > OFF_MM)
+    lines.push(
+      p.rel < 0
+        ? 'Low spot: the first layer here gets less squish and is the likeliest place for PETG to lift. Look for grit under the plate here or a plate edge not sitting flat.'
+        : 'High spot: the nozzle gets close here, which can scrape or over-squish. Look for debris on top of the plate or a bump under it.',
+    )
+  if (p.retries)
+    lines.push(
+      `The probe retried ${p.retries}× here because its readings disagreed by up to ${p.spread.toFixed(3)} mm (it allows 0.015 mm). Usually filament on the nozzle tip or something on the plate at this spot.`,
+    )
+  if (lines.length === 1) lines.push('Within normal range.')
+  return lines
+}

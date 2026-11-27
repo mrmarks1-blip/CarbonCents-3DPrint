@@ -195,3 +195,11 @@ e. **Investigate a small helper running on the printer** (`/kip/bin/python3.13`,
 - Why the firmware's "LAN up" judgement flapped every 20 s on a healthy wifi link (section 6).
 - Does Z offset work mid-print? Verified only with the printer idle.
 - The Android build has not been tested against the real printer since these findings.
+
+## Releasing
+
+Bump `version` in `package.json` (and `versionCode` / `versionName` in `android/app/build.gradle`),
+add a "New in vX.Y.Z" section to `docs/release/notes.md`, and push to `main`. The build creates the
+`vX.Y.Z` tag and the GitHub release with the APK, printer zip and web zip when no release for that
+version exists yet. Pushing a `v*` tag, or publishing a release on the website, also works.
+

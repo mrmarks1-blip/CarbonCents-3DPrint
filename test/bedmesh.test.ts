@@ -71,3 +71,34 @@ describe('bed mesh report', () => {
     expect(runs.map((r) => r.thisBoot)).toEqual([false, false, true])
   })
 })
+
+import { explainPoint, problemAreas, zoneOf } from '../src/features/bedmesh'
+describe('problem areas', () => {
+  const runs = splitRuns(parseProbes(makeLog()))
+  it('names zones on the bed', () => {
+    const xs = [20, 65, 110, 155, 200]
+    const ys = [20, 65.2, 110.4, 155.6, 200.8]
+    expect(zoneOf({ x: 20, y: 20 }, xs, ys)).toBe('front-left')
+    expect(zoneOf({ x: 200, y: 200.8 }, xs, ys)).toBe('back-right')
+    expect(zoneOf({ x: 110, y: 110.4 }, xs, ys)).toBe('centre')
+    expect(zoneOf({ x: 110, y: 20 }, xs, ys)).toBe('front')
+    expect(zoneOf({ x: 65, y: 65.2 }, xs, ys)).toBe('centre') // inner ring is not an edge
+  })
+  it('sums up a whole low rim as "all edges"', () => {
+    const pts = runs[1].points.map((p) => ({ ...p, rel: [20, 200].includes(p.x) || [20, 200.8].includes(p.y) ? -0.15 : 0.2 }))
+    expect(problemAreas(pts)).toMatchObject({ low: ['all edges'], high: ['centre'] })
+  })
+  it('lists low and high areas and where the probe retried', () => {
+    const pts = runs[1].points.map((p) => ({ ...p, rel: p.x === 20 && p.y === 20 ? -0.2 : p.x === 110 && p.y === 110.4 ? 0.15 : 0 }))
+    const a = problemAreas(pts)
+    expect(a.low).toEqual(['front-left'])
+    expect(a.high).toEqual(['centre'])
+    expect(a.retried.sort()).toEqual(['front-left', 'right'])
+  })
+  it('explains a single point', () => {
+    const p = runs[1].points.find((q) => q.retries)!
+    const t = explainPoint(p, [20, 65, 110, 155, 200], [20, 65.2, 110.4, 155.6, 200.8]).join(' ')
+    expect(t).toMatch(/front-left/)
+    expect(t).toMatch(/retried 1×/)
+  })
+})
