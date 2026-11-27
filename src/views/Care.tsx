@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks'
 import { freshTasks, remaining, usage, type Task } from '../features/maintenance'
 import { log, printHours, tasks } from '../store'
 import { Bar } from './bits'
+import { BedReport } from './BedReport'
 
 export function Care() {
   const [edit, setEdit] = useState<Task | null>(null)
@@ -54,6 +55,7 @@ export function Care() {
       </section>
 
       {edit && <EditDialog task={edit} onSave={saveTask} onDelete={() => ((tasks.value = tasks.value.filter((x) => x.id !== edit.id)), setEdit(null))} onClose={() => setEdit(null)} />}
+      <BedReport />
     </>
   )
 }

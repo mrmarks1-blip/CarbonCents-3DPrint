@@ -231,3 +231,11 @@ td, th { text-align: left; padding: 6px 8px 6px 0; border-top: 1px solid var(--l
 .fine[open] { display: grid; gap: 8px; }
 input.ch-red { accent-color: #e0322e; } input.ch-green { accent-color: #2fb457; } input.ch-blue { accent-color: #2f6fe0; }
 @media (min-width: 900px) { .sheet { left: calc(50% + 44px); } .sheet.at-bottom { bottom: 16px; } }
+
+/* Bed levelling report */
+svg.mesh { width: 100%; max-width: 520px; height: auto; }
+svg.mesh .ax { fill: var(--dim); font-size: 11px; text-anchor: middle; }
+svg.mesh .v { fill: #111; font-size: 11px; text-anchor: middle; font-variant-numeric: tabular-nums; }
+svg.mesh .retry { stroke: #111; stroke-width: 3; }
+svg.mesh .flag { fill: #111; font-weight: 800; font-size: 14px; }
+.bedreport .tips { margin: 0; padding-left: 18px; display: grid; gap: 6px; }

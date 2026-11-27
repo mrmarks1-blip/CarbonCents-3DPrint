@@ -229,6 +229,38 @@ try {
   await shot('care')
   ok('maintenance screen')
 
+  // Bed levelling report. The web build cannot open the printer's shell; the
+  // Android plugin is replaced by a stand-in serving a synthetic log.
+  const bed = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 })
+  await bed.addInitScript(() => {
+    localStorage.setItem('cc.settings', JSON.stringify({ host: '127.0.0.1' }))
+    const lines = []
+    let t = 4_000_000
+    for (const [j, y] of [20, 65.2, 110.4, 155.6, 200.8].entries())
+      for (const [i, x] of [20, 65, 110, 155, 200].entries()) {
+        const z = 0.2 - (i === 0 || i === 4 || j === 0 || j === 4 ? 0.12 : 0)
+        lines.push(`[probe][174][Debug][${(t += 900)}]:probe at ${x.toFixed(3)},${y.toFixed(3)} is z=${z.toFixed(6)}`)
+        if (i === 0 && j === 0) lines.push(`[probe][310][Debug][${t}]:PrinterProbe samples exceed tolerance. Retrying... MAX:0.6 MIN:0.05 samples_tolerance:0.015000`)
+      }
+    const answers = {
+      clock: '5000.00 9000.00\n1795000000',
+      'probe-log': lines.join('\n'),
+      'mesh-files': '/board-resource/printer.cfg',
+      'mesh-file': '[bed_mesh default]\npoints =\n  0.1, 0.0\n  -0.1, 0.05\n',
+    }
+    window.__ccShellMock = { read: async ({ query }) => ({ text: answers[query] }) }
+  })
+  await bed.goto('http://127.0.0.1:4173/')
+  await bed.locator('nav button', { hasText: 'Care' }).click()
+  await bed.getByRole('button', { name: 'Read from printer' }).click()
+  await bed.locator('svg.mesh').first().waitFor()
+  await bed.getByText(/1 of 25 points needed retries/).waitFor()
+  await bed.getByText(/edges are 0\.12 mm lower/).waitFor()
+  await bed.getByText('Saved mesh').waitFor()
+  await bed.locator('.bedreport').screenshot({ path: `${out}/bed-report.png` })
+  ok('bed levelling report: heat map, retried points, edge check and saved mesh')
+  await bed.close()
+
   const wide = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 })
   await wide.goto('http://127.0.0.1:4173/')
   await wide.getByPlaceholder('192.168.1.50').fill('127.0.0.1')
